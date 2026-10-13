@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Kalkulačka výchozího seřízení veslařské lodi podle kategorie, pohlaví, lodi a mír veslaře.">
+<meta name="theme-color" content="#0D6B70">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Seřízení lodi">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Seřízení veslařské lodi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: měřicí list loděnice — formulář nahoře, karty výsledků podle místa v lodi, pod nimi bokorys, pohled shora a posádka */
+:root{
+  --bg:#F3F6F5; --paper:#FFFFFF; --ink:#13232A; --muted:#5B6E73; --line:#D5DFDE;
+  --water:#0D6B70; --water-soft:#E1EFEE; --blade:#C27419; --blade-soft:#FBEEDC; --hull:#B9C9C7;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1719; --paper:#152225; --ink:#E4ECEB; --muted:#93A6A8; --line:#26383B;
+  --water:#4DB6B3; --water-soft:#183236; --blade:#E79A3E; --blade-soft:#33261A; --hull:#3A5154; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1719; --paper:#152225; --ink:#E4ECEB; --muted:#93A6A8; --line:#26383B;
+  --water:#4DB6B3; --water-soft:#183236; --blade:#E79A3E; --blade-soft:#33261A; --hull:#3A5154; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;margin:0}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:flex;flex-direction:column;gap:20px}
+header h1{font-family:var(--display);font-weight:700;font-size:2.3rem;line-height:1;margin:0;letter-spacing:.01em;text-wrap:balance}
+header p{margin:.4rem 0 0;color:var(--muted);max-width:62ch}
+.eyebrow{font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;font-size:.8rem;color:var(--water);font-weight:600}
+section.panel,details.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px}
+details.panel summary{cursor:pointer;font-family:var(--display);font-weight:600;font-size:1.35rem;letter-spacing:.02em}
+details.panel summary small{font-family:var(--body);font-size:.85rem;color:var(--muted);font-weight:400;margin-left:6px;letter-spacing:0}
+details.panel[open]>summary{margin-bottom:14px}
+h2{font-family:var(--display);font-weight:600;font-size:1.35rem;margin:0;letter-spacing:.02em}
+.label{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.rowline{display:flex;flex-wrap:wrap;gap:18px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font:inherit;font-size:.95rem;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.seg button small{color:var(--muted);margin-left:4px}
+.seg button[aria-pressed="true"]{background:var(--water);border-color:var(--water);color:var(--paper)}
+.seg button[aria-pressed="true"] small{color:inherit;opacity:.8}
+.seg button:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--blade);outline-offset:2px}
+.field-group{display:flex;flex-direction:column;gap:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f label{font-size:.9rem;font-weight:600}
+.f .hint{font-size:.78rem;color:var(--muted)}
+input,select{font:inherit;font-family:var(--mono);font-size:1rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);width:100%}
+input[type="text"],select{font-family:var(--body)}
+input[type="checkbox"]{width:auto;accent-color:var(--water)}
+.check{display:flex;gap:8px;align-items:center;font-weight:600}
+.results{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card.wide{grid-column:1/-1}
+.card.wide dl{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 28px}
+.card.wide dl>div{display:flex;justify-content:space-between;gap:12px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:6px}
+.card h3{font-family:var(--display);font-weight:600;font-size:1.15rem;margin:0;letter-spacing:.03em;text-transform:uppercase;color:var(--water)}
+dl{margin:0;display:flex;flex-direction:column;gap:6px}
+dl>.rw{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+dt{font-size:.95rem}
+dt small{display:block;color:var(--muted);font-size:.78rem;line-height:1.3}
+dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.05rem;text-align:right;white-space:nowrap}
+dd.key{background:var(--blade-soft);color:var(--blade);padding:1px 6px;border-radius:4px;font-weight:500}
+.note{font-size:.88rem;color:var(--muted);margin:0;max-width:72ch}
+.diagram{overflow-x:auto}
+.diagram svg{display:block;width:100%;min-width:520px;max-width:680px;height:auto;margin:0 auto}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-weight:600;border-radius:6px;padding:8px 14px;cursor:pointer;border:1px solid var(--water);background:var(--water);color:var(--paper)}
+.btn.ghost{background:transparent;color:var(--water)}
+.btn.small{padding:4px 10px;font-size:.9rem}
+.saved{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;font-size:.9rem;background:var(--bg)}
+.chip.on{border-color:var(--water);background:var(--water-soft)}
+.chip button{font:inherit;border:0;background:transparent;color:var(--ink);cursor:pointer;padding:2px 6px;border-radius:999px}
+.chip button.x{color:var(--muted)}
+.chip button.yes{color:var(--blade);font-weight:600}
+.store{font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.store .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.store.shared .dot{background:var(--water)}
+.toast{font-size:.88rem;color:var(--water);min-height:1.2em}
+ol.checks{margin:0;padding-left:1.2rem;display:flex;flex-direction:column;gap:6px;max-width:70ch}
+.warn{background:var(--blade-soft);border-left:3px solid var(--blade);padding:8px 12px;border-radius:4px;font-size:.92rem}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem;min-width:640px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td select{min-width:150px;padding:5px 8px}
+.shared-row{display:flex;flex-wrap:wrap;gap:8px 20px}
+.shared-row div{display:flex;flex-direction:column}
+.shared-row b{font-family:var(--mono);font-weight:500;font-size:1.1rem;color:var(--blade)}
+.shared-row span{font-size:.8rem;color:var(--muted)}
+.sources a{color:var(--water)}
+.sources ul{margin:0;padding-left:1.1rem;font-size:.9rem}
+svg .t{font:12.5px var(--body);fill:var(--muted)}
+svg .tk{font:600 13px var(--mono);fill:var(--blade)}
+svg .tw{font:600 12.5px var(--body);fill:var(--water)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Veslařský klub · trenérská pomůcka</div>
+  <h1>Seřízení veslařské lodi</h1>
+  <p>Zadej kategorii, loď a míry veslaře. Kalkulačka navrhne výchozí nastavení vesel, krakorců, nohavek a kolejniček. Je to start pro první jízdu, doladění dělá trenér na vodě.</p>
+</header>
+
+<section class="panel" aria-labelledby="h-in">
+  <h2 id="h-in">Veslař a loď</h2>
+  <div class="rowline">
+    <div class="field-group">
+      <span class="label">Kategorie</span>
+      <div class="seg" id="cat"></div>
+    </div>
+    <div class="field-group">
+      <span class="label">Pohlaví</span>
+      <div class="seg" id="sex"></div>
+    </div>
+  </div>
+  <div class="field-group">
+    <span class="label">Loď</span>
+    <div class="seg" id="boat"></div>
+  </div>
+  <div class="grid">
+    <div class="f"><label for="name">Jméno</label><input id="name" type="text" placeholder="např. Tomáš N."><span class="hint">potřeba pro uložení</span></div>
+    <div class="f"><label for="h">Výška postavy</label><input id="h" type="number" inputmode="decimal" min="120" max="215" value="164"><span class="hint">cm, bez bot</span></div>
+    <div class="f"><label for="w">Hmotnost</label><input id="w" type="number" inputmode="decimal" min="25" max="130" value="52"><span class="hint">kg</span></div>
+    <div class="f"><label for="arm">Rozpětí paží</label><input id="arm" type="number" inputmode="decimal" min="110" max="225" placeholder="= výška"><span class="hint">cm, konečky prstů; nepovinné</span></div>
+    <div class="f"><label for="leg">Délka nohy</label><input id="leg" type="number" inputmode="decimal" min="50" max="110" placeholder="≈ 0,47 × výška"><span class="hint">cm, rozkrok–zem; nepovinné</span></div>
+    <div class="f"><label for="blade">Typ lopatky</label>
+      <select id="blade">
+        <option value="6">Macon</option>
+        <option value="0" selected>Big Blade</option>
+        <option value="-1">Smoothie2</option>
+        <option value="-5">Fat2</option>
+      </select><span class="hint" id="bladeHint">mění doporučenou délku vesla</span></div>
+    <div class="f"><label for="exp">Úroveň</label>
+      <select id="exp">
+        <option value="beg">Začátečník</option>
+        <option value="mid" selected>Trénovaný</option>
+        <option value="top">Závodník</option>
+      </select></div>
+    <div class="f"><label for="flex">Ohebnost kotníků</label>
+      <select id="flex">
+        <option value="good">Dobrá</option>
+        <option value="avg" selected>Průměrná</option>
+        <option value="poor">Omezená</option>
+      </select><span class="hint">mění úhel nohavek</span></div>
+  </div>
+  <div class="actions">
+    <button class="btn" id="save" type="button">Uložit veslaře</button>
+    <button class="btn ghost" id="newr" type="button">Nový veslař</button>
+    <button class="btn ghost" id="copy" type="button">Kopírovat nastavení</button>
+    <span class="toast" id="toast" role="status"></span>
+  </div>
+  <div class="store" id="store"><span class="dot"></span><span id="storeTxt">Uložení veslaři: jen v tomto zařízení</span></div>
+  <div class="saved" id="saved"></div>
+  <div class="actions" id="backup" hidden>
+    <button class="btn ghost small" id="expBtn" type="button">Stáhnout zálohu svěřenců</button>
+    <label class="btn ghost small" for="impFile" style="display:inline-block">Nahrát zálohu</label>
+    <input type="file" id="impFile" accept="application/json,.json" hidden>
+    <span class="note">Záloha je soubor, který přeneseš do jiného zařízení nebo pošleš kolegovi.</span>
+  </div>
+  <div id="migrate" hidden><button class="btn ghost small" id="migrateBtn" type="button"></button></div>
+</section>
+
+<details class="panel" id="rangesPanel">
+  <summary>Rozsahy našich vesel <small id="rangesState">vypnuto</small></summary>
+  <p class="note">Zadej, kam až jdou vaše stavitelná vesla. Délka a vnitřní páka se pak drží v tomto rozsahu a rozpětí nebo vyložení se dopočítá z páky, aby seděl překryv madel.</p>
+  <label class="check"><input type="checkbox" id="rOn"> Používat rozsahy našich vesel</label>
+  <div class="grid">
+    <div class="f"><label for="sLenMin">Párová – délka od</label><input id="sLenMin" type="number" value="284"></div>
+    <div class="f"><label for="sLenMax">Párová – délka do</label><input id="sLenMax" type="number" value="289"></div>
+    <div class="f"><label for="sInMin">Párová – páka od</label><input id="sInMin" type="number" step="0.5" value="86"></div>
+    <div class="f"><label for="sInMax">Párová – páka do</label><input id="sInMax" type="number" step="0.5" value="90"></div>
+    <div class="f"><label for="wLenMin">Nepárová – délka od</label><input id="wLenMin" type="number" value="370"></div>
+    <div class="f"><label for="wLenMax">Nepárová – délka do</label><input id="wLenMax" type="number" value="375"></div>
+    <div class="f"><label for="wInMin">Nepárová – páka od</label><input id="wInMin" type="number" step="0.5" value="113"></div>
+    <div class="f"><label for="wInMax">Nepárová – páka do</label><input id="wInMax" type="number" step="0.5" value="117"></div>
+  </div>
+  <div class="actions"><button class="btn" id="rSave" type="button">Uložit rozsahy</button><span class="note">Hodnoty v cm.</span></div>
+</details>
+
+<div class="warn" id="warn" hidden></div>
+
+<div class="results" id="results"></div>
+
+<section class="panel" aria-labelledby="h-side">
+  <h2 id="h-side">Bokorys: kolejničky, havlinka, nohavky</h2>
+  <p class="note">Vzdálenosti podél lodi jsou měřené od svislice přes osu sloupku havlinky. Poloha nohavek a kolejniček je odhad z postavy, ověř ji v lodi podle kontrol níže.</p>
+  <div class="diagram" id="side"></div>
+</section>
+
+<section class="panel" aria-labelledby="h-dia">
+  <h2 id="h-dia">Oblouk vesla shora</h2>
+  <p class="note">Poloha konce madla v záseku a v dokončení, měřeno podél lodi od osy sloupku havlinky. Tímhle si ověříš posun nohavek pásmem přímo v lodi.</p>
+  <div class="diagram" id="dia"></div>
+</section>
+
+<section class="panel" id="crewPanel" aria-labelledby="h-crew">
+  <h2 id="h-crew">Posádka</h2>
+  <p class="note" id="crewIntro"></p>
+  <div id="crewShared"></div>
+  <div class="tablewrap" id="crewTable"></div>
+</section>
+
+<section class="panel" aria-labelledby="h-chk">
+  <h2 id="h-chk">Kontrola na vodě</h2>
+  <ol class="checks" id="checks"></ol>
+</section>
+
+<section class="panel sources" aria-labelledby="h-src">
+  <h2 id="h-src">Z čeho výpočet vychází</h2>
+  <p class="note">Míry pro dospělé, výšky havlinek a nohavek, úhel nohavek 38–42°, rozdíl stran u párových lodí, poloha kolejniček a nakolmení podle materiálu Labské akademie veslování (ČVS); ženské hodnoty podle jejích tabulek pro ženy. Délky vesel podle typu lopatky podle Concept2. Úhly záseku a dokončení a výpočet polohy madla (vnitřní páka × sin úhlu) podle World Rowing. Hodnoty pro žactvo, dorost a juniory a poloha nohavek z postavy jsou odvozené odhady, ověř je s trenérem mládeže.</p>
+  <ul>
+    <li><a href="https://www.czechrowing.cz/serizovani-veslarskych-lodi/50474341/serizovani_lodi.pdf" target="_blank" rel="noopener">Seřizování lodí – Labská akademie veslování (PDF)</a></li>
+    <li><a href="https://concept2.co.uk/node/62" target="_blank" rel="noopener">Concept2 – Oar Length, Gearing and Rig</a></li>
+    <li><a href="https://www.concept2.com/oars/sculls/length-and-rigging" target="_blank" rel="noopener">Concept2 – Sculls: Length and Rigging</a></li>
+    <li><a href="https://worldrowing.com/wp-content/uploads/2020/10/Practical-Boat-Rigging-Gianni-Postilione-Conny-Draper.pdf" target="_blank" rel="noopener">World Rowing – Practical Boat Rigging (PDF)</a></li>
+    <li><a href="https://row2k.com/features/2842/how-to-do-a-simple-rigger-height-check/" target="_blank" rel="noopener">row2k – Simple Rigger Height Check</a></li>
+  </ul>
+</section>
+</div>
+
+<script>
+(function(){
+const CATS={
+  zak:{label:'Žactvo',labelZ:'Žactvo',age:'do 14 let',mixed:true,refH:162,refW:52,
+    scull:{span:[156.5,158.5],ov:14,len:[276,284]},sweep:{off:1,len:[360,368]},
+    gate:{s:15,w:16},heel:15.5,ang:{s:[52,35],w:[48,29]}},
+  dor:{label:'Dorostenci',labelZ:'Dorostenky',short:'Dorost',age:'15–16 let',refH:176,refW:67,
+    scull:{span:[157,159],ov:16,len:[281,287]},sweep:{off:.5,len:[365,372]},
+    gate:{s:15.5,w:16.5},heel:16,ang:{s:[56,38],w:[51,31]}},
+  jun:{label:'Junioři',labelZ:'Juniorky',short:'Junioři',age:'17–18 let',refH:182,refW:76,
+    scull:{span:[158,160],ov:17,len:[284,289]},sweep:{off:0,len:[369,375]},
+    gate:{s:16,w:17},heel:16.5,ang:{s:[58,40],w:[53,32]}},
+  dos:{label:'Muži',labelZ:'Ženy',short:'Dospělí',age:'19+',refH:184,refW:82,
+    scull:{span:[158,160],ov:18,len:[287,291]},sweep:{off:0,len:[372,377]},
+    gate:{s:16.5,w:17.5},heel:17,ang:{s:[60,41],w:[55,33]}}
+};
+const BOATS={
+  '1x':{t:'s',label:'1x',seats:1,spanAdj:0,lenAdj:0,side:.5},
+  '2x':{t:'s',label:'2x',seats:2,spanAdj:0,lenAdj:0,side:1},
+  '4x':{t:'s',label:'4x',seats:4,spanAdj:-1,lenAdj:1,side:1.5},
+  '2-':{t:'w',label:'2−',seats:2,spread:86,lenAdj:0,noZak:true},
+  '4-':{t:'w',label:'4−',seats:4,spread:85,lenAdj:.5,noZak:true},
+  '4+':{t:'w',label:'4+',seats:4,spread:85.5,lenAdj:0},
+  '8+':{t:'w',label:'8+',seats:8,spread:84,lenAdj:1}
+};
+const DEF={zak:{h:164,w:52,blade:'6',boat:'1x'},dor:{h:176,w:66,blade:'0',boat:'2x'},jun:{h:182,w:75,blade:'0',boat:'4x'},dos:{h:184,w:80,blade:'0',boat:'1x'}};
+const FIELDS=['h','w','arm','leg','blade','exp','flex'];
+let cat='zak', sex='m', boat='1x', currentId=null;
+let db=null, roster=[], crew={};
+let ranges={on:false,scull:{lenMin:284,lenMax:289,inMin:86,inMax:90},sweep:{lenMin:370,lenMax:375,inMin:113,inMax:117}};
+
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const r05=v=>Math.round(v*2)/2, r1=v=>Math.round(v);
+const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:null};
+const fmt=(v,d=1)=>{const s=(Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);return s.replace(/\.0+$/,'').replace('.',',')};
+const rad=d=>d*Math.PI/180;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+
+function catData(k,sx){
+  const c=CATS[k], z=sx==='z'&&!c.mixed, d=z?1:0;
+  return {key:k,label:z?c.labelZ:c.label,mixed:!!c.mixed,refH:c.refH-8*d,refW:c.refW-9*d,
+    scull:{span:c.scull.span.map(v=>v-.5*d),ov:c.scull.ov,len:c.scull.len.map(v=>v-2*d)},
+    sweep:{off:c.sweep.off,len:c.sweep.len.map(v=>v-4*d)},
+    gate:{s:c.gate.s-.5*d,w:c.gate.w-.5*d},heel:c.heel-.5*d,ang:c.ang};
+}
+
+function segs(){
+  $('cat').innerHTML=Object.entries(CATS).map(([k,c])=>`<button type="button" data-k="${k}" aria-pressed="${k===cat}">${c.short||c.label}<small>${c.age}</small></button>`).join('');
+  const mixed=CATS[cat].mixed;
+  $('sex').innerHTML=[['m','Muži'],['z','Ženy']].map(([k,l])=>`<button type="button" data-k="${k}" aria-pressed="${!mixed&&k===sex}" ${mixed?'disabled title="Žactvo se nedělí"':''}>${l}</button>`).join('');
+  const zak=cat==='zak';
+  [...$('blade').options].forEach(op=>{op.disabled=zak?op.value!=='6':op.value==='6'});
+  if(zak) $('blade').value='6';
+  else if($('blade').value==='6') $('blade').value='0';
+  $('bladeHint').textContent=zak?'žactvo jezdí jen s lopatkou Macon':'od dorostu bez lopatky Macon';
+  $('boat').innerHTML=Object.entries(BOATS).map(([k,b])=>{const dis=cat==='zak'&&b.noZak;return `<button type="button" data-k="${k}" aria-pressed="${k===boat}" ${dis?'disabled title="Žactvo tuto disciplínu nejezdí"':''}>${b.label}</button>`}).join('');
+}
+$('cat').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cat=b.dataset.k;
+  const d=DEF[cat];$('h').value=d.h;$('w').value=d.w;$('blade').value=d.blade;boat=d.boat;segs();calc();});
+$('sex').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;sex=b.dataset.k;segs();calc();});
+$('boat').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;boat=b.dataset.k;segs();calc();});
+FIELDS.forEach(id=>$(id).addEventListener('input',calc));
+
+function formRower(){const p={name:$('name').value.trim(),cat,sex,boat};FIELDS.forEach(k=>p[k]=$(k).value);return p}
+
+function rangeFor(scull){
+  if(!ranges.on) return null;
+  const R=ranges[scull?'scull':'sweep'];
+  const ok=(a,b)=>a!=null&&b!=null&&a<=b;
+  return {len:ok(R.lenMin,R.lenMax)?[R.lenMin,R.lenMax]:null,inb:ok(R.inMin,R.inMax)?[R.inMin,R.inMax]:null};
+}
+
+function compute(p,force){
+  force=force||{};
+  const c=catData(p.cat,p.sex), B=BOATS[p.boat], scull=B.t==='s';
+  const H=num(p.h)||c.refH, W=num(p.w)||c.refW;
+  const arm=num(p.arm)||H, leg=num(p.leg)||0.47*H;
+  const blade=parseFloat(p.blade)||0, exp=p.exp||'mid', flex=p.flex||'avg';
+  const dH=H-c.refH, dW=W-c.refW;
+  const expA={beg:-4,mid:0,top:2}[exp];
+  const legA=clamp((leg/H-0.47)*100,-2,2);
+  const R=rangeFor(scull);
+  const o={scull,H,W,leg,c,B,notes:[],exp};
+  let inb;
+  if(scull){
+    const sp=c.scull.span;
+    const spanRec=r05(clamp((sp[0]+sp[1])/2+dH*0.08+B.spanAdj,sp[0]-1,sp[1]));
+    const ovT=c.scull.ov+clamp((arm-H)*0.4,-3,3)+(exp==='beg'?-1:0);
+    inb=r05((spanRec+ovT)/2);
+    if(force.inboard!=null) inb=force.inboard;
+    else if(R&&R.inb){const k=r05(clamp(inb,R.inb[0],R.inb[1]));if(k!==inb)o.notes.push(`Vnitřní páka je omezená rozsahem vašich vesel (doporučeno ${fmt(inb)} cm), rozpětí se dopočítalo z ní.`);inb=k;}
+    o.inboard=inb;
+    o.span=force.span!=null?force.span:r05(clamp(2*inb-ovT,154,162));
+    o.overlap=2*inb-o.span;
+  }else{
+    const spreadRec=r05(clamp(B.spread+c.sweep.off+clamp(dH*0.05,-1,1),83,87.5));
+    inb=r05(spreadRec+30);
+    if(force.inboard!=null) inb=force.inboard;
+    else if(R&&R.inb){const k=r05(clamp(inb,R.inb[0],R.inb[1]));if(k!==inb)o.notes.push(`Vnitřní páka je omezená rozsahem vašich vesel (doporučeno ${fmt(inb)} cm), vyložení se dopočítalo z ní.`);inb=k;}
+    o.inboard=inb;
+    o.spread=force.spread!=null?force.spread:r05(clamp(inb-30,82,88.5));
+  }
+  const L=scull?c.scull.len:c.sweep.len;
+  const base=clamp((L[0]+L[1])/2+dH*0.2+dW*0.08+B.lenAdj+(exp==='beg'?-1:0),L[0],L[1]);
+  o.lenBase=r1(base);
+  let len=r1(base+blade);
+  if(force.len!=null) len=force.len;
+  else if(R&&R.len){const k=r1(clamp(len,R.len[0],R.len[1]));if(k!==len)o.notes.push(`Délka vesla je omezená rozsahem vašich vesel (doporučeno ${len} cm).`);len=k;}
+  o.len=len; o.bladeAdj=blade;
+  o.gear=(o.len-o.inboard)/o.inboard;
+  const g=scull?c.gate.s:c.gate.w;
+  o.gate=r05(clamp(g+dH*0.03,scull?14.5:15.5,scull?18:19));
+  if(scull) o.gateL=o.gate+B.side;
+  o.heel=r05(clamp(c.heel+dH*0.02,15,18));
+  o.angle={good:42,avg:40,poor:38}[flex];
+  const a=scull?c.ang.s:c.ang.w;
+  o.catchA=r1(a[0]+expA+clamp(dH*0.1,-3,3)+legA);
+  o.finA=r1(a[1]+(exp==='beg'?-2:exp==='top'?1:0));
+  o.catchD=o.inboard*Math.sin(rad(o.catchA));
+  o.finD=o.inboard*Math.sin(rad(o.finA));
+  o.pitch=exp==='beg'?'5–6°':exp==='mid'?'4°':'2–4°';
+  // poloha těla podél lodi; + = k zádi od osy havlinky
+  o.seatFin=-o.finD-8;
+  o.travel=0.68*leg;
+  o.seatCatch=o.seatFin+o.travel;
+  o.heelX=o.seatCatch+0.42*leg;
+  o.trackStern=o.seatCatch+12;
+  o.trackBow=o.seatFin-12;
+  o.trackLen=o.trackStern-o.trackBow;
+  if(H<c.refH-22) o.notes.push('Veslař je výrazně menší než typický pro kategorii. Zkontroluj, zda v záseku pohodlně dosáhne.');
+  if(scull&&o.overlap<12) o.notes.push('Překryv madel je malý, ruce se nebudou křížit. Zvětši vnitřní páku o 0,5–1 cm nebo zuž rozpětí.');
+  if(scull&&o.overlap>24) o.notes.push('Překryv madel je velký. Zkrať vnitřní páku nebo rozšiř rozpětí.');
+  return o;
+}
+
+const dirTxt=x=>x>=0?`${r1(x)} cm k zádi`:`${r1(-x)} cm ke špičce`;
+function row(dt,sub,dd,key){return `<div class="rw"><dt>${dt}${sub?`<small>${sub}</small>`:''}</dt><dd${key?' class="key"':''}>${dd}</dd></div>`}
+
+function render(o){
+  const s=o.scull;
+  const oars=`<div class="card"><h3>Vesla</h3><dl>
+    ${row('Celková délka',o.bladeAdj?`u Big Blade by to bylo ${o.len-o.bladeAdj} cm`:'',`${o.len} cm`,true)}
+    ${row('Vnitřní páka','konec madla → límec',`${fmt(o.inboard)} cm`,true)}
+    ${row('Vnější část','',`${fmt(o.len-o.inboard)} cm`)}
+    ${row('Převod','vnější : vnitřní; víc = těžší',`${fmt(o.gear,2)}`)}
+    ${row('Nakolmení','lopatka + havlinka',o.pitch)}
+  </dl></div>`;
+  const rig=`<div class="card"><h3>Krakorce</h3><dl>
+    ${s?row('Rozpětí','střed sloupku ↔ střed sloupku',`${fmt(o.span)} cm`,true)
+       :row('Vyložení','osa lodi → střed sloupku',`${fmt(o.spread)} cm`,true)}
+    ${s?row('Překryv madel','2 × páka − rozpětí',`${fmt(o.overlap)} cm`):''}
+    ${s?row('Výška havlinky – pravá','strokovská strana, nad sedátkem',`${fmt(o.gate)} cm`,true)
+         +row('Výška havlinky – levá','háčkovská strana, levá ruka nad pravou',`${fmt(o.gateL)} cm`,true)
+       :row('Výška havlinky','nad nejnižším bodem sedátka',`${fmt(o.gate)} cm`,true)}
+  </dl></div>`;
+  const feet=`<div class="card wide"><h3>Nohavky a kolejničky</h3><dl>
+    ${row('Pata nohavek','od osy havlinky',dirTxt(o.heelX),true)}
+    ${row('Hloubka pat','svisle pod sedátkem',`${fmt(o.heel)} cm`,true)}
+    ${row('Úhel nohavek','podle ohebnosti kotníků',`${o.angle}°`)}
+    ${row('Kolejničky – začátek','konec u zádi',dirTxt(o.trackStern))}
+    ${row('Kolejničky – konec','konec u špičky',dirTxt(o.trackBow))}
+    ${row('Potřebná délka kolejniček','',`${r1(o.trackLen)} cm`)}
+    ${row('Madlo v dokončení',`úhel ${o.finA}°`,`${r1(o.finD)} cm ke špičce`)}
+  </dl><p class="note">Polohu nohavek dolaď tak, aby konec madla v dokončení ležel ${r1(o.finD)} cm za osou havlinky směrem ke špičce.</p></div>`;
+  $('results').innerHTML=oars+rig+feet;
+  const w=$('warn'); w.hidden=!o.notes.length; w.innerHTML=o.notes.map(esc).join('<br>');
+  side(o); diagram(o); checks(o);
+}
+
+function side(o){
+  const W=680,Hh=340,s=3.7,xmin=-100,x0=50;
+  const X=x=>x0+(x-xmin)*s, Y=y=>165-y*s;
+  const gate=o.gate, heel=o.heel, a=rad(o.angle);
+  const px=X(0);
+  const pe={x:o.heelX+26*Math.cos(a),y:-heel+26*Math.sin(a)};
+  const floor=-heel-3;
+  const dimY1=Y(floor)+26, dimY2=Y(floor)+54;
+  const arrow=(x1,y,x2)=>`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="var(--blade)" stroke-width="1.3"/>`
+    +`<line x1="${x1}" y1="${y-5}" x2="${x1}" y2="${y+5}" stroke="var(--blade)"/><line x1="${x2}" y1="${y-5}" x2="${x2}" y2="${y+5}" stroke="var(--blade)"/>`;
+  const varrow=(x,y1,y2)=>`<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="var(--blade)" stroke-width="1.3"/>`
+    +`<line x1="${x-5}" y1="${y1}" x2="${x+5}" y2="${y1}" stroke="var(--blade)"/><line x1="${x-5}" y1="${y2}" x2="${x+5}" y2="${y2}" stroke="var(--blade)"/>`;
+  const seat=(x,dashed)=>`<rect x="${X(x-11)}" y="${Y(2.5)}" width="${22*s}" height="${2.5*s}" rx="3" fill="${dashed?'none':'var(--water-soft)'}" stroke="var(--water)" stroke-width="1.5" ${dashed?'stroke-dasharray="4 3"':''}/>`;
+  const svg=`<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Bokorys: výška havlinky ${fmt(gate)} cm, hloubka pat ${fmt(heel)} cm, pata nohavek ${dirTxt(o.heelX)}, kolejničky od ${dirTxt(o.trackBow)} do ${dirTxt(o.trackStern)}">
+  <text x="${X(xmin)}" y="22" class="t">← špička (záda veslaře)</text>
+  <text x="${X(x0)+0}" y="22" class="t" text-anchor="end">záď →</text>
+  <path d="M${X(xmin)} ${Y(6)} L${X(x0)} ${Y(6)} M${X(xmin)} ${Y(floor)} L${X(x0)} ${Y(floor)}" stroke="var(--hull)" stroke-width="3" fill="none"/>
+  <text x="${X(xmin)}" y="${Y(floor)+16}" class="t">dno lodi</text>
+  <line x1="${X(xmin)}" y1="${Y(0)}" x2="${X(x0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="3 4"/>
+  <text x="${X(xmin)}" y="${Y(0)-6}" class="t">úroveň sedátka</text>
+  <line x1="${px}" y1="34" x2="${px}" y2="${dimY2+6}" stroke="var(--muted)" stroke-dasharray="2 4"/>
+  <text x="${px}" y="${30}" class="tw" text-anchor="middle">osa havlinky</text>
+  <line x1="${X(-6)}" y1="${Y(6)}" x2="${px}" y2="${Y(gate)}" stroke="var(--muted)" stroke-width="2.5"/>
+  <line x1="${px}" y1="${Y(gate-1)}" x2="${px}" y2="${Y(gate+6)}" stroke="var(--ink)" stroke-width="3"/>
+  <rect x="${px-2}" y="${Y(gate+4)}" width="${3.2*s}" height="${4*s}" fill="none" stroke="var(--ink)" stroke-width="1.5"/>
+  ${varrow(px+22,Y(0),Y(gate))}
+  <text x="${px+30}" y="${Y(gate/2)+4}" class="tk">${fmt(gate)} cm</text>
+  <rect x="${X(o.trackBow)}" y="${Y(-1)}" width="${(o.trackLen)*s}" height="${1.3*s}" fill="var(--hull)"/>
+  ${seat(o.seatFin,false)}${seat(o.seatCatch,true)}
+  <text x="${X(o.seatFin)}" y="${Y(2.5)-8}" class="t" text-anchor="middle">dokončení</text>
+  <text x="${X(o.seatCatch)}" y="${Y(2.5)-8}" class="t" text-anchor="middle">zásek</text>
+  <line x1="${X(o.heelX)}" y1="${Y(-heel)}" x2="${X(pe.x)}" y2="${Y(pe.y)}" stroke="var(--blade)" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="${X(o.heelX)}" cy="${Y(-heel)}" r="4.5" fill="var(--ink)"/>
+  <text x="${X(pe.x)+8}" y="${Y(pe.y)+4}" class="t">nohavka ${o.angle}°</text>
+  ${varrow(X(o.heelX)-16,Y(0),Y(-heel))}
+  <text x="${X(o.heelX)-22}" y="${Y(-heel/2)+4}" class="tk" text-anchor="end">${fmt(heel)} cm</text>
+  ${arrow(px,dimY1,X(o.heelX))}
+  <text x="${(px+X(o.heelX))/2}" y="${dimY1-7}" class="tk" text-anchor="middle">pata ${r1(Math.abs(o.heelX))}</text>
+  ${arrow(X(o.trackBow),dimY2,px)}
+  <text x="${(X(o.trackBow)+px)/2}" y="${dimY2-7}" class="tk" text-anchor="middle">kolejničky ${r1(-o.trackBow)} ke špičce</text>
+  ${o.trackStern>0?arrow(px,dimY2,X(o.trackStern)):''}
+  <text x="${X(Math.max(o.trackStern,0))+8}" y="${dimY2+4}" class="tk">${o.trackStern>=0?'+':'−'}${r1(Math.abs(o.trackStern))} k zádi</text>
+  </svg>`;
+  $('side').innerHTML=svg;
+}
+
+function diagram(o){
+  const W=640,Hh=320,cx=W/2,py=235,scale=2.0;
+  const I=o.inboard*scale;
+  const hx=(a,dir)=>cx+dir*I*Math.sin(rad(a));
+  const hy=a=>py-I*Math.cos(rad(a));
+  const out=(a,dir)=>({x:cx-dir*70*Math.sin(rad(a)),y:py+70*Math.cos(rad(a))});
+  const cX=hx(o.catchA,1),cY=hy(o.catchA),fX=hx(o.finA,-1),fY=hy(o.finA);
+  const oc=out(o.catchA,1),of=out(o.finA,-1);
+  const top=Math.min(cY,fY)-28;
+  $('dia').innerHTML=`<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Oblouk vesla: zásek ${o.catchA} stupňů, dokončení ${o.finA} stupňů">
+  <line x1="20" y1="${py-60}" x2="${W-20}" y2="${py-60}" stroke="var(--line)" stroke-width="2"/><line x1="${cx}" y1="${py-60}" x2="${cx}" y2="${py}" stroke="var(--muted)" stroke-width="3"/><text x="${W-24}" y="${py-66}" class="t" text-anchor="end">bok lodi</text>
+  <text x="24" y="20" class="t">← špička</text><text x="${W-24}" y="20" class="t" text-anchor="end">záď →</text>
+  <line x1="${cx}" y1="30" x2="${cx}" y2="${Hh-10}" stroke="var(--muted)" stroke-dasharray="2 4"/>
+  <line x1="${cX}" y1="${cY}" x2="${oc.x}" y2="${oc.y}" stroke="var(--water)" stroke-width="4" stroke-linecap="round"/>
+  <line x1="${fX}" y1="${fY}" x2="${of.x}" y2="${of.y}" stroke="var(--water)" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+  <circle cx="${cx}" cy="${py}" r="6" fill="var(--blade)"/>
+  <text x="${cx+10}" y="${py+22}" class="t">havlinka</text>
+  <circle cx="${cX}" cy="${cY}" r="5" fill="var(--water)"/><circle cx="${fX}" cy="${fY}" r="5" fill="var(--water)"/>
+  <line x1="${cx}" y1="${top}" x2="${cX}" y2="${top}" stroke="var(--blade)"/>
+  <line x1="${cx}" y1="${top}" x2="${fX}" y2="${top}" stroke="var(--blade)"/>
+  <text x="${(cx+cX)/2}" y="${top-8}" class="tk" text-anchor="middle">${r1(o.catchD)} cm</text>
+  <text x="${(cx+fX)/2}" y="${top-8}" class="tk" text-anchor="middle">${r1(o.finD)} cm</text>
+  <text x="${cX}" y="${cY+22}" class="t" text-anchor="middle">zásek ${o.catchA}°</text>
+  <text x="${fX}" y="${fY+22}" class="t" text-anchor="middle">dokončení ${o.finA}°</text>
+  <text x="${cx}" y="${Hh-14}" class="t" text-anchor="middle">celkový oblouk ${o.catchA+o.finA}°</text>
+  </svg>`;
+}
+
+function checks(o){
+  const items=[
+    'Výška havlinek: na klidné vodě nech veslo najít hloubku samo. V dokončení má být konec madla zhruba 2–5 cm nad spodní hranou hrudní kosti a vnější předloktí vodorovně.',
+    `Nohavky: posuň je tak, aby konec madla v dokončení ležel ${r1(o.finD)} cm za osou havlinky směrem ke špičce. V plné přední poloze jsou holeně svislé a vozík má na kolejničkách ještě 2–3 cm rezervu.`,
+    'Kolejničky: vozík nesmí v záseku ani v dokončení narážet na doraz. Když naráží v záseku, posuň kolejničky k zádi; když v dokončení, ke špičce.',
+    'Hloubka pat: pata nemá v nohavce drhnout o dno lodi. Při omezené ohebnosti kotníků pomůže hlubší pata nebo menší úhel nohavek.',
+    o.scull?'Překryv: v polovině protahu jde levá ruka nad pravou a těsně před ní. Pokud se ruce srážejí, zvětši rozpětí nebo zkrať vnitřní páku.':'Ve víceveslici drž výšky havlinek u všech sedátek v rozmezí 1 cm, jinak se loď hůř vyvažuje.',
+    'Zátěž: když je protah těžký a pomalý, zkrať veslo a límec posuň k lopatce, aby páka zůstala stejná. Pro těžší převod naopak.',
+    'Lehčí posádka, než na jakou je loď stavěná, loď méně ponoří. Pak dej havlinky níž (podložky nad havlinku).'
+  ];
+  $('checks').innerHTML=items.map(t=>`<li>${t}</li>`).join('');
+}
+
+/* ---------- posádka ---------- */
+function crewRender(){
+  const B=BOATS[boat], n=B.seats;
+  $('crewPanel').hidden=n<2;
+  if(n<2) return;
+  const key=boat; const sel=(crew[key]||[]).slice(0,n);
+  $('crewIntro').textContent=roster.length
+    ?`Přiřaď uložené veslaře na místa v lodi ${B.label}. Vesla a ${B.t==='s'?'rozpětí':'vyložení'} jsou společná a počítají se z průměru posádky, havlinky, nohavky a kolejničky každému zvlášť.`
+    :'Nejdřív ulož veslaře nahoře. Pak je tu přiřadíš na místa v lodi a dostaneš společné nastavení vesel i individuální nastavení každého místa.';
+  const members=[];for(let i=0;i<n;i++){const r=roster.find(x=>x.id===sel[i]);if(r)members.push(r)}
+  let shared=null;
+  if(members.length){
+    const avg=k=>members.reduce((a,m)=>a+(num(m[k])||(k==='arm'?num(m.h):k==='leg'?0.47*num(m.h):0)),0)/members.length;
+    const base=Object.assign({},members[0],{boat,h:avg('h'),w:avg('w'),arm:avg('arm'),leg:avg('leg'),blade:$('blade').value,exp:$('exp').value});
+    shared=compute(base);
+    $('crewShared').innerHTML=`<div class="shared-row">
+      <div><span>Délka vesla</span><b>${shared.len} cm</b></div>
+      <div><span>Vnitřní páka</span><b>${fmt(shared.inboard)} cm</b></div>
+      <div><span>${shared.scull?'Rozpětí':'Vyložení'}</span><b>${fmt(shared.scull?shared.span:shared.spread)} cm</b></div>
+      ${shared.scull?`<div><span>Překryv</span><b>${fmt(shared.overlap)} cm</b></div>`:''}
+      <div><span>Průměr posádky</span><b>${r1(shared.H)} cm / ${r1(shared.W)} kg</b></div>
+    </div><p class="note">Lopatka a úroveň se berou z formuláře nahoře.</p>`;
+  }else $('crewShared').innerHTML='';
+  const opts=id=>`<option value="">—</option>`+roster.map(r=>`<option value="${esc(r.id)}" ${r.id===id?'selected':''}>${esc(r.name||'Bez jména')} (${r1(num(r.h)||0)} cm)</option>`).join('');
+  let gates=[];
+  const rows=[];
+  for(let i=0;i<n;i++){
+    const id=sel[i]||'', r=roster.find(x=>x.id===id);
+    const place=i===0?`${i+1} · háček`:i===n-1?`${i+1} · strok`:`${i+1}`;
+    let cells='<td class="num" colspan="5" style="color:var(--muted)">—</td>';
+    if(r&&shared){
+      const o=compute(Object.assign({},r,{boat,blade:$('blade').value}),{len:shared.len,inboard:shared.inboard,span:shared.span,spread:shared.spread});
+      gates.push(o.gate);
+      cells=`<td class="num">${o.scull?`P ${fmt(o.gate)} / L ${fmt(o.gateL)}`:fmt(o.gate)}</td>
+        <td class="num">${fmt(o.heel)} · ${o.angle}°</td>
+        <td class="num">${dirTxt(o.heelX)}</td>
+        <td class="num">${dirTxt(o.trackStern)} / ${dirTxt(o.trackBow)}</td>
+        <td class="num">${r1(o.finD)} cm</td>`;
+    }
+    rows.push(`<tr><td class="num">${place}</td><td><select data-seat="${i}" aria-label="Veslař na místě ${i+1}">${opts(id)}</select></td>${cells}</tr>`);
+  }
+  let warn='';
+  if(gates.length>1&&Math.max(...gates)-Math.min(...gates)>1) warn=`<p class="warn">Výšky havlinek se v posádce liší o víc než 1 cm. Sjednoť je a rozdíl dorovnej výškou sedátka nebo hloubkou pat.</p>`;
+  $('crewTable').innerHTML=`<table><thead><tr><th>Místo</th><th>Veslař</th><th>Havlinka cm</th><th>Paty cm · úhel</th><th>Pata nohavek od osy</th><th>Kolejničky začátek / konec</th><th>Madlo v dokončení</th></tr></thead><tbody>${rows.join('')}</tbody></table>${warn}`;
+}
+$('crewTable').addEventListener('change',e=>{
+  const s=e.target.closest('select[data-seat]');if(!s)return;
+  const a=(crew[boat]||[]).slice();a[+s.dataset.seat]=s.value;crew[boat]=a;lsSet('serizeni-posadky',crew);crewRender();
+});
+
+/* ---------- výpočet a souhrn ---------- */
+let current;
+function calc(){current=compute(formRower());render(current);crewRender();
+  $('rangesState').textContent=ranges.on?'zapnuto':'vypnuto';}
+
+function summary(o){
+  const n=$('name').value.trim();
+  const lbl=catData(cat,sex).label;
+  return [`${n?n+' – ':''}${lbl}, ${o.B.label}, ${o.H} cm / ${o.W} kg`,
+    `Veslo: ${o.len} cm, vnitřní páka ${fmt(o.inboard)} cm (převod ${fmt(o.gear,2)})`,
+    o.scull?`Rozpětí: ${fmt(o.span)} cm, překryv ${fmt(o.overlap)} cm`:`Vyložení: ${fmt(o.spread)} cm`,
+    o.scull?`Havlinky: pravá ${fmt(o.gate)} cm, levá ${fmt(o.gateL)} cm nad sedátkem`:`Havlinka: ${fmt(o.gate)} cm nad sedátkem`,
+    `Nohavky: pata ${dirTxt(o.heelX)} od osy havlinky, ${fmt(o.heel)} cm pod sedátkem, úhel ${o.angle}°`,
+    `Kolejničky: začátek ${dirTxt(o.trackStern)}, konec ${dirTxt(o.trackBow)} (délka ${r1(o.trackLen)} cm)`,
+    `Madlo: dokončení ${r1(o.finD)} cm ke špičce, zásek ${r1(o.catchD)} cm k zádi (oblouk ${o.finA}° / ${o.catchA}°)`,
+    `Nakolmení: ${o.pitch}`].join('\n');
+}
+
+function toast(t){$('toast').textContent=t;setTimeout(()=>{if($('toast').textContent===t)$('toast').textContent=''},3000)}
+$('copy').addEventListener('click',()=>{
+  const txt=summary(current);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast('Zkopírováno do schránky'),()=>fallback(txt));
+  }else fallback(txt);
+});
+function fallback(txt){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');toast('Zkopírováno do schránky')}catch(e){toast('Kopírování nejde, text je označený')}ta.remove();}
+
+/* ---------- rozsahy vesel ---------- */
+const RMAP={sLenMin:['scull','lenMin'],sLenMax:['scull','lenMax'],sInMin:['scull','inMin'],sInMax:['scull','inMax'],
+  wLenMin:['sweep','lenMin'],wLenMax:['sweep','lenMax'],wInMin:['sweep','inMin'],wInMax:['sweep','inMax']};
+function fillRanges(){$('rOn').checked=!!ranges.on;Object.entries(RMAP).forEach(([id,[a,b]])=>{const v=ranges[a]&&ranges[a][b];$(id).value=v!=null?v:''})}
+function readRanges(){ranges.on=$('rOn').checked;Object.entries(RMAP).forEach(([id,[a,b]])=>{ranges[a]=ranges[a]||{};ranges[a][b]=num($(id).value)})}
+['rOn',...Object.keys(RMAP)].forEach(id=>$(id).addEventListener('input',()=>{readRanges();calc()}));
+$('rSave').addEventListener('click',async()=>{
+  readRanges();
+  const body=JSON.parse(JSON.stringify(ranges));
+  if(db){try{await db.doc('nastaveni/vesla').set(body);toast('Rozsahy uloženy pro všechny')}catch(e){toast('Rozsahy se nepodařilo uložit do sdíleného seznamu');}}
+  else{lsSet('serizeni-rozsahy',body);toast('Rozsahy uloženy v tomto zařízení')}
+});
+
+/* ---------- veslaři: sdílený seznam (db) nebo toto zařízení ---------- */
+let confirmId=null;
+function renderSaved(){
+  const list=roster.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'cs'));
+  $('saved').innerHTML=list.map(p=>{
+    const lbl=`${esc(p.name||'Bez jména')} · ${esc(catData(p.cat||'zak',p.sex||'m').label)} ${esc((BOATS[p.boat]||{}).label||'')}`;
+    if(confirmId===p.id) return `<span class="chip on">Smazat ${esc(p.name||'')}?<button type="button" class="yes" data-yes="${esc(p.id)}">Smazat</button><button type="button" data-no="1">Ne</button></span>`;
+    return `<span class="chip${p.id===currentId?' on':''}"><button type="button" class="ld" data-id="${esc(p.id)}">${lbl}</button><button type="button" class="x" data-x="${esc(p.id)}" aria-label="Smazat ${esc(p.name||'')}">×</button></span>`;
+  }).join('');
+}
+function slug(s){return (s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'veslar').slice(0,40)}
+$('save').addEventListener('click',async()=>{
+  const p=formRower();
+  if(!p.name){toast('Doplň jméno, ať veslaře v seznamu najdeš');$('name').focus();return}
+  const same=roster.find(r=>r.id===currentId)||roster.find(r=>r.name===p.name);
+  const id=same?same.id:slug(p.name)+'-'+Math.random().toString(36).slice(2,6);
+  p.updated=new Date().toISOString();
+  if(db){
+    try{await db.collection('veslari').doc(id).set(p);currentId=id;toast(`Uloženo: ${p.name}`)}
+    catch(e){toast(e&&e.code==='invalid_argument'?'Nemáš oprávnění ukládat do sdíleného seznamu':'Uložení se nepovedlo, zkus to znovu')}
+  }else{
+    const i=roster.findIndex(r=>r.id===id);const rec=Object.assign({id},p);
+    if(i>=0)roster[i]=rec;else roster.push(rec);
+    lsSet('serizeni-veslari',roster);currentId=id;renderSaved();crewRender();toast(`Uloženo: ${p.name}`);
+  }
+  renderSaved();
+});
+$('newr').addEventListener('click',()=>{currentId=null;$('name').value='';$('arm').value='';$('leg').value='';renderSaved();$('name').focus()});
+$('saved').addEventListener('click',async e=>{
+  const ld=e.target.closest('.ld'),x=e.target.closest('.x'),yes=e.target.closest('[data-yes]'),no=e.target.closest('[data-no]');
+  if(ld){const p=roster.find(r=>r.id===ld.dataset.id);if(!p)return;currentId=p.id;cat=p.cat||'zak';sex=p.sex||'m';boat=p.boat||'1x';
+    if(cat==='zak'&&BOATS[boat].noZak)boat='1x';
+    $('name').value=p.name||'';FIELDS.forEach(k=>{if(p[k]!=null)$(k).value=p[k]});segs();calc();renderSaved();}
+  if(x){confirmId=x.dataset.x;renderSaved();}
+  if(no){confirmId=null;renderSaved();}
+  if(yes){const id=yes.dataset.yes;confirmId=null;
+    if(db){try{await db.collection('veslari').doc(id).delete();toast('Smazáno')}catch(err){toast('Smazání se nepovedlo')}}
+    else{roster=roster.filter(r=>r.id!==id);lsSet('serizeni-veslari',roster);toast('Smazáno')}
+    if(currentId===id)currentId=null;renderSaved();crewRender();}
+});
+
+function setStore(shared){
+  $('store').classList.toggle('shared',shared);
+  $('storeTxt').textContent=shared?'Uložení veslaři: sdílený seznam klubu (telefon, počítač i ostatní trenéři s přístupem)':'Uložení veslaři: jen v tomto zařízení';
+}
+
+function initLocal(){
+  roster=lsGet('serizeni-veslari',[]).map((r,i)=>r.id?r:Object.assign({id:slug(r.name||'veslar')+'-'+i},r));
+  const r=lsGet('serizeni-rozsahy',null);if(r)ranges=r;
+  crew=lsGet('serizeni-posadky',{});
+  fillRanges();renderSaved();
+}
+
+async function initDb(){
+  if(!window.claude||!window.claude.use) return;
+  let d=null;try{d=await window.claude.use('db')}catch(e){d=null}
+  if(!d) return;
+  db=d;setStore(true);
+  const local=lsGet('serizeni-veslari',[]);
+  db.collection('veslari').onSnapshot(snap=>{
+    roster=snap.docs.map(x=>Object.assign({id:x.id},x.data()));
+    renderSaved();crewRender();
+    const missing=local.filter(l=>l.name&&!roster.some(r=>r.name===l.name));
+    $('migrate').hidden=!missing.length;
+    if(missing.length)$('migrateBtn').textContent=`Přenést ${missing.length} ${missing.length===1?'veslaře':'veslařů'} z tohoto zařízení do sdíleného seznamu`;
+  },()=>{db=null;setStore(false);initLocal();});
+  db.doc('nastaveni/vesla').onSnapshot(s=>{if(s.exists){const v=s.data();ranges=JSON.parse(JSON.stringify(v));fillRanges();calc();}},()=>{});
+  $('migrateBtn').onclick=async()=>{
+    const missing=local.filter(l=>l.name&&!roster.some(r=>r.name===l.name));
+    for(const l of missing){const id=slug(l.name)+'-'+Math.random().toString(36).slice(2,6);const b=Object.assign({},l);delete b.id;
+      try{await db.collection('veslari').doc(id).set(b)}catch(e){toast('Přenos se nepovedl');return}}
+    toast('Přeneseno');
+  };
+}
+
+/* ---------- záloha (jen samostatná verze mimo Clauda) ---------- */
+if(!window.claude){
+  $('backup').hidden=false;
+  $('expBtn').addEventListener('click',()=>{
+    const data={app:'serizeni-lodi',version:1,exported:new Date().toISOString(),veslari:roster,rozsahy:ranges};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='sverenci-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+    toast('Záloha stažena');
+  });
+  $('impFile').addEventListener('change',async e=>{
+    const f=e.target.files[0];if(!f)return;
+    try{
+      const d=JSON.parse(await f.text());
+      const list=Array.isArray(d)?d:(d.veslari||[]);
+      let added=0,updated=0;
+      list.forEach(r=>{if(!r||!r.name)return;
+        const i=roster.findIndex(x=>x.id===r.id||x.name===r.name);
+        const rec=Object.assign({},r,{id:r.id||slug(r.name)+'-'+Math.random().toString(36).slice(2,6)});
+        if(i>=0){roster[i]=rec;updated++}else{roster.push(rec);added++}});
+      lsSet('serizeni-veslari',roster);
+      if(d.rozsahy){ranges=d.rozsahy;lsSet('serizeni-rozsahy',ranges);fillRanges()}
+      renderSaved();calc();toast(`Nahráno: ${added} nových, ${updated} aktualizováno`);
+    }catch(err){toast('Soubor se nepodařilo načíst. Je to záloha z této kalkulačky?')}
+    e.target.value='';
+  });
+}
+
+initLocal();segs();calc();setStore(false);initDb();
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
+</script>
+</body>
+</html>
