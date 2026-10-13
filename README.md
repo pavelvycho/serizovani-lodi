@@ -14,6 +14,10 @@ Je to jeden statický web (HTML + CSS + JS bez knihoven a bez buildu). Funguje o
 
 Stránka `lode.html` (záložky **Lodě** a **Vesla**) je společná evidence lodí, sad vesel a seřízení pro celý klub. Data jsou v databázi Supabase, přístup mají jen trenéři ze seznamu. Nastavení: `supabase/NAVOD.md`. V kalkulačce tlačítko **Zapsat do lodi** přenese spočítané seřízení do vybrané lodi.
 
+## Docházka
+
+Stránka `dochazka.html`: zápis tréninku (byl / omluven / chyběl, náplň, poznámka), přehled účasti za období s procenty a export do Excelu (CSV), správa svěřenců a skupin. Data v Supabase, nastavení v `supabase/NAVOD.md`.
+
 ## Data kalkulačky
 
 Svěřenci a rozsahy vesel v kalkulačce se ukládají **do prohlížeče v zařízení** (localStorage). Každý trenér má svoje svěřence ve svém telefonu. Přenos mezi zařízeními nebo kolegovi: **Stáhnout zálohu svěřenců** → soubor `.json` → v druhém zařízení **Nahrát zálohu**.

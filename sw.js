@@ -1,6 +1,6 @@
 // Offline cache. Při každé změně aplikace zvyš verzi, ať si telefony stáhnou novou.
-const CACHE = 'serizeni-v2';
-const CORE = ['./', './index.html', './lode.html', './config.js', './manifest.webmanifest',
+const CACHE = 'serizeni-v3';
+const CORE = ['./', './index.html', './lode.html', './dochazka.html', './config.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
