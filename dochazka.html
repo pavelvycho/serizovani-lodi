@@ -278,7 +278,8 @@ $('fCode').addEventListener('submit',async e=>{e.preventDefault();
   if(error)$('loginMsg').textContent='Kód nesedí nebo vypršel.';});
 $('codeBack').addEventListener('click',()=>{$('fCode').hidden=true;$('fEmail').hidden=false;$('loginMsg').textContent=''});
 $('logout').addEventListener('click',()=>sb.auth.signOut());
-sb.auth.onAuthStateChange((ev,s)=>handleSession(s));
+// Supabase: v callbacku nesmí běžet další dotazy (zablokovalo by se přihlášení) – proto odklad.
+sb.auth.onAuthStateChange((ev,s)=>{setTimeout(()=>handleSession(s),0)});
 sb.auth.getSession().then(({data})=>handleSession(data.session));
 let handling=null;
 async function handleSession(session){
