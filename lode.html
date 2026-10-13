@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0D6B70">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Seřízení lodi">
+<title>Lodě a vesla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: loděnice — horní lišta s přepínačem Kalkulačka / Lodě / Vesla, seznam lodí po velikostech, detail lodi s historií seřízení */
+:root{
+  --bg:#F3F6F5; --paper:#FFFFFF; --ink:#13232A; --muted:#5B6E73; --line:#D5DFDE;
+  --water:#0D6B70; --water-soft:#E1EFEE; --blade:#C27419; --blade-soft:#FBEEDC;
+  --ok:#2E7D4F; --ok-soft:#E3F2E8; --warn:#B26A00; --warn-soft:#FDF0DA; --bad:#B23A3A; --bad-soft:#F8E3E3;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0E1719; --paper:#152225; --ink:#E4ECEB; --muted:#93A6A8; --line:#26383B;
+  --water:#4DB6B3; --water-soft:#183236; --blade:#E79A3E; --blade-soft:#33261A;
+  --ok:#6CC08F; --ok-soft:#183223; --warn:#E3A84B; --warn-soft:#33281A; --bad:#E07B7B; --bad-soft:#3A1F1F; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.top{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+.top-in{max-width:900px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-family:var(--display);font-weight:700;font-size:1.3rem;letter-spacing:.02em;margin-right:auto}
+nav.tabs{display:flex;gap:4px}
+nav.tabs a,nav.tabs button{font:inherit;font-weight:600;font-size:.95rem;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px;cursor:pointer}
+nav.tabs [aria-current="page"]{background:var(--water);border-color:var(--water);color:var(--paper)}
+.who{font-size:.85rem;color:var(--muted);display:flex;gap:8px;align-items:center}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:18px 60px;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;line-height:1.05;margin:0}
+h2{font-family:var(--display);font-weight:600;font-size:1.35rem;margin:0;letter-spacing:.02em}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.note{font-size:.88rem;color:var(--muted);margin:0;max-width:70ch}
+.btn{font:inherit;font-weight:600;border-radius:6px;padding:8px 14px;cursor:pointer;border:1px solid var(--water);background:var(--water);color:var(--paper)}
+.btn.ghost{background:transparent;color:var(--water)}
+.btn.small{padding:4px 10px;font-size:.9rem}
+.btn.danger{border-color:var(--bad);background:transparent;color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--blade);outline-offset:2px}
+input,select,textarea{font:inherit;font-size:1rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);width:100%}
+input[type="number"]{font-family:var(--mono)}
+textarea{min-height:70px;resize:vertical}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.f label{font-size:.85rem;font-weight:600}
+.f .hint{font-size:.75rem;color:var(--muted)}
+.f.full{grid-column:1/-1}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar input{flex:1 1 180px;width:auto}
+.toolbar select{width:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:inherit;font-size:.9rem;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:4px 11px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--water);border-color:var(--water);color:var(--paper)}
+.group h3{font-family:var(--display);font-weight:600;font-size:1.05rem;text-transform:uppercase;letter-spacing:.08em;color:var(--water);margin:6px 0 6px}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.item:hover{border-color:var(--water)}
+.typ{font-family:var(--mono);font-size:.9rem;background:var(--water-soft);color:var(--water);border-radius:4px;padding:1px 6px;text-align:center;min-width:44px}
+.item .name{font-weight:700}
+.item .meta{font-size:.85rem;color:var(--muted);grid-column:2/4}
+.pill{font-size:.75rem;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.s-ok{background:var(--ok-soft);color:var(--ok)}
+.s-gar{background:var(--water-soft);color:var(--water)}
+.s-np{background:var(--warn-soft);color:var(--warn)}
+.s-vy{background:var(--bad-soft);color:var(--bad)}
+.empty{padding:20px;text-align:center;color:var(--muted)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 16px}
+.kv div{display:flex;flex-direction:column}
+.kv span{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.kv b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hist details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--bg)}
+.hist summary{cursor:pointer;font-weight:600}
+.hist summary small{font-weight:400;color:var(--muted);margin-left:6px}
+.banner{background:var(--blade-soft);border-left:3px solid var(--blade);padding:10px 12px;border-radius:4px;font-size:.92rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:.92rem;z-index:20;max-width:calc(100% - 32px)}
+.back{font:inherit;background:none;border:0;color:var(--water);cursor:pointer;padding:0;font-weight:600}
+.code{font-family:var(--mono);letter-spacing:.3em;font-size:1.3rem;text-align:center}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0}
+legend{font-size:.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:0 4px}
+.oar .typ{min-width:70px}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="brand">Seřízení lodi</div>
+  <nav class="tabs" aria-label="Sekce">
+    <a href="./">Kalkulačka</a>
+    <button type="button" id="tabLode" aria-current="page">Lodě</button>
+    <button type="button" id="tabVesla">Vesla</button>
+  </nav>
+  <div class="who" id="who" hidden><span id="whoTxt"></span><button class="btn ghost small" id="logout" type="button">Odhlásit</button></div>
+</div></header>
+
+<main class="wrap">
+  <!-- chybí nastavení -->
+  <section class="panel" id="vSetup" hidden>
+    <h1>Databáze není připojená</h1>
+    <p class="note">V souboru <code>config.js</code> chybí adresa a klíč Supabase. Postup je v souboru <code>supabase/NAVOD.md</code> v repozitáři.</p>
+  </section>
+
+  <!-- přihlášení -->
+  <section class="panel" id="vLogin" hidden>
+    <h1>Přihlášení trenéra</h1>
+    <p class="note">Lodě a jejich seřízení jsou společné pro celý klub. Přihlásíš se e-mailem, který má správce v seznamu trenérů. Pošleme ti šestimístný kód.</p>
+    <form id="fEmail" class="actions">
+      <div class="f" style="flex:1 1 240px"><label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required placeholder="jmeno@example.cz"></div>
+      <button class="btn" type="submit" style="align-self:flex-end">Poslat kód</button>
+    </form>
+    <form id="fCode" class="actions" hidden>
+      <div class="f" style="flex:1 1 200px"><label for="code">Kód z e-mailu</label><input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required></div>
+      <button class="btn" type="submit" style="align-self:flex-end">Přihlásit</button>
+      <button class="btn ghost" type="button" id="codeBack" style="align-self:flex-end">Jiný e-mail</button>
+    </form>
+    <p class="note" id="loginMsg"></p>
+  </section>
+
+  <!-- bez přístupu -->
+  <section class="panel" id="vDenied" hidden>
+    <h1>Nemáš přístup</h1>
+    <p class="note">E-mail <b id="deniedMail"></b> není v seznamu trenérů. Požádej správce aplikace, ať tě přidá, a pak se přihlas znovu.</p>
+  </section>
+
+  <div class="banner" id="pending" hidden>
+    <span id="pendingTxt"></span>
+    <button class="btn ghost small" type="button" id="pendingDrop">Zahodit</button>
+  </div>
+
+  <!-- seznam lodí -->
+  <section id="vLode" hidden>
+    <div class="panel">
+      <div class="actions" style="justify-content:space-between">
+        <h1>Lodě klubu</h1>
+        <button class="btn" type="button" id="addBoat">Přidat loď</button>
+      </div>
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="Hledat název, výrobce, kategorii…" aria-label="Hledat">
+        <select id="fStav" aria-label="Stav">
+          <option value="aktivni">V provozu a v garáži</option>
+          <option value="v provozu">Jen v provozu</option>
+          <option value="mimo">Nepojízdné a vyřazené</option>
+          <option value="vse">Všechny</option>
+        </select>
+      </div>
+      <div class="chips" id="fTyp"></div>
+    </div>
+    <div id="lodeList" style="margin-top:12px"></div>
+  </section>
+
+  <!-- detail lodi -->
+  <section id="vLod" hidden>
+    <button class="back" type="button" id="backLode">← Zpět na lodě</button>
+    <div id="lodBody" style="display:flex;flex-direction:column;gap:16px;margin-top:10px"></div>
+  </section>
+
+  <!-- vesla -->
+  <section id="vVesla" hidden>
+    <div class="panel">
+      <div class="actions" style="justify-content:space-between">
+        <h1>Sady vesel</h1>
+        <button class="btn" type="button" id="addOar">Přidat sadu</button>
+      </div>
+      <p class="note">Rozsah délky a páky vyplň u stavitelných vesel. Hodí se pro zápis seřízení i pro kalkulačku.</p>
+    </div>
+    <div id="veslaList" style="margin-top:12px"></div>
+    <div id="oarForm" style="margin-top:12px"></div>
+  </section>
+
+  <p class="note" id="loading" hidden>Načítám…</p>
+</main>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>{if(v===''||v==null)return null;const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:null};
+const fmt=v=>v==null?'—':String(v).replace('.',',');
+const datum=d=>d?new Date(d+'T12:00:00').toLocaleDateString('cs-CZ'):'—';
+const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+const lsSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let toastT;function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3200)}
+
+const STAVY={'v provozu':'s-ok','v garáži':'s-gar','nepojízdná':'s-np','vyřazená':'s-vy'};
+const VIEWS=['vSetup','vLogin','vDenied','vLode','vLod','vVesla'];
+function show(v){VIEWS.forEach(x=>$(x).hidden=x!==v);$('tabLode').setAttribute('aria-current',v==='vLode'||v==='vLod'?'page':'false');$('tabVesla').setAttribute('aria-current',v==='vVesla'?'page':'false');window.scrollTo(0,0)}
+
+const cfg=window.SERIZENI_CONFIG||{};
+if(!cfg.supabaseUrl||!cfg.supabaseAnonKey||!window.supabase){show('vSetup');return}
+const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+
+let me=null, lode=[], sady=[], ser=[], curLod=null, typFilter='vse', loaded=false;
+
+/* ---------- přihlášení ---------- */
+let loginEmail='';
+$('fEmail').addEventListener('submit',async e=>{
+  e.preventDefault();loginEmail=$('email').value.trim();
+  $('loginMsg').textContent='Posílám kód…';
+  const {error}=await sb.auth.signInWithOtp({email:loginEmail,options:{shouldCreateUser:true,emailRedirectTo:location.href.split('#')[0].split('?')[0]}});
+  if(error){$('loginMsg').textContent='Kód se nepodařilo poslat: '+error.message;return}
+  $('fEmail').hidden=true;$('fCode').hidden=false;$('code').focus();
+  $('loginMsg').textContent=`Kód jsme poslali na ${loginEmail}. Můžeš taky kliknout na odkaz v e-mailu.`;
+});
+$('fCode').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const {error}=await sb.auth.verifyOtp({email:loginEmail,token:$('code').value.trim(),type:'email'});
+  if(error)$('loginMsg').textContent='Kód nesedí nebo vypršel. Zkus to znovu nebo si pošli nový.';
+});
+$('codeBack').addEventListener('click',()=>{$('fCode').hidden=true;$('fEmail').hidden=false;$('loginMsg').textContent=''});
+$('logout').addEventListener('click',async()=>{await sb.auth.signOut();});
+
+sb.auth.onAuthStateChange((ev,session)=>{handleSession(session)});
+sb.auth.getSession().then(({data})=>handleSession(data.session));
+
+let handling=null;
+async function handleSession(session){
+  const u=session&&session.user;
+  if(!u){me=null;loaded=false;$('who').hidden=true;$('fEmail').hidden=false;$('fCode').hidden=true;show('vLogin');return}
+  if(me&&me.email===u.email&&loaded)return;
+  if(handling)return handling;
+  handling=(async()=>{
+    me={email:u.email};$('who').hidden=false;$('whoTxt').textContent=u.email;
+    $('loading').hidden=false;
+    const {data:t}=await sb.from('treneri').select('email,jmeno').eq('email',u.email.toLowerCase()).maybeSingle();
+    const {data:t2}=t?{data:t}:await sb.from('treneri').select('email,jmeno').ilike('email',u.email).maybeSingle();
+    if(!t2){$('loading').hidden=true;$('deniedMail').textContent=u.email;show('vDenied');return}
+    me.jmeno=t2.jmeno;
+    await loadAll();loaded=true;$('loading').hidden=true;
+    route();
+  })();
+  try{await handling}finally{handling=null}
+}
+
+/* ---------- data ---------- */
+async function loadAll(){
+  const [a,b,c]=await Promise.all([
+    sb.from('lode').select('*').order('typ').order('nazev'),
+    sb.from('sady_vesel').select('*').order('druh').order('lopatka').order('nazev'),
+    sb.from('serizeni').select('*').order('datum',{ascending:false}).order('created_at',{ascending:false})
+  ]);
+  if(a.error||b.error||c.error){toast('Data se nepodařilo načíst. Jsi online?');return}
+  lode=a.data;sady=b.data;ser=c.data;
+}
+const lastSer=id=>ser.find(s=>s.lod_id===id);
+const lodName=l=>l.nazev||`Bez jména (${[l.vyrobce,l.barva].filter(Boolean).join(', ')})`;
+const isScull=t=>/x/i.test(t||'');
+function sizeOf(t){const m=String(t).match(/\d/);return m?+m[0]:0}
+const SIZE_LABEL={8:'Osmy',4:'Čtyřky',2:'Dvojky a dvojskify',1:'Skify',0:'Ostatní'};
+
+/* ---------- navigace ---------- */
+function route(){
+  const h=location.hash.replace('#','');
+  if(h.startsWith('lod-')){const l=lode.find(x=>x.id===h.slice(4));if(l){openLod(l.id,false);return}}
+  if(h==='vesla'){renderVesla();show('vVesla');return}
+  renderLode();show('vLode');
+}
+window.addEventListener('hashchange',()=>{if(loaded)route()});
+$('tabLode').addEventListener('click',()=>{location.hash='';if(loaded)route()});
+$('tabVesla').addEventListener('click',()=>{location.hash='vesla'});
+$('backLode').addEventListener('click',()=>{location.hash=''});
+
+/* ---------- čekající seřízení z kalkulačky ---------- */
+function renderPending(){
+  const p=lsGet('serizeni-k-zapsani',null);
+  $('pending').hidden=!p||!loaded;
+  if(p)$('pendingTxt').innerHTML=`Máš připravené seřízení z kalkulačky: <b>${esc(p.popis||'')}</b>. Otevři loď a dej <b>Zapsat seřízení</b>.`;
+}
+$('pendingDrop').addEventListener('click',()=>{lsSet('serizeni-k-zapsani',null);renderPending()});
+
+/* ---------- seznam lodí ---------- */
+$('q').addEventListener('input',renderLode);$('fStav').addEventListener('change',renderLode);
+$('fTyp').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;typFilter=b.dataset.t;renderLode()});
+function renderLode(){
+  renderPending();
+  const typy=['vse',...[...new Set(lode.map(l=>l.typ))].sort((a,b)=>sizeOf(b)-sizeOf(a)||a.localeCompare(b))];
+  $('fTyp').innerHTML=typy.map(t=>`<button type="button" data-t="${esc(t)}" aria-pressed="${t===typFilter}">${t==='vse'?'Vše':esc(t)}</button>`).join('');
+  const q=$('q').value.trim().toLowerCase(), st=$('fStav').value;
+  const list=lode.filter(l=>{
+    if(typFilter!=='vse'&&l.typ!==typFilter)return false;
+    if(st==='aktivni'&&!(l.stav==='v provozu'||l.stav==='v garáži'))return false;
+    if(st==='v provozu'&&l.stav!=='v provozu')return false;
+    if(st==='mimo'&&!(l.stav==='nepojízdná'||l.stav==='vyřazená'))return false;
+    if(q&&![l.nazev,l.vyrobce,l.kategorie,l.barva,l.typ,l.typ_alt,l.poznamka].join(' ').toLowerCase().includes(q))return false;
+    return true;
+  });
+  if(!list.length){$('lodeList').innerHTML=`<div class="panel empty">${lode.length?'Žádná loď neodpovídá filtru.':'Zatím tu nejsou žádné lodě. Přidej první tlačítkem Přidat loď.'}</div>`;return}
+  const groups={};list.forEach(l=>{(groups[sizeOf(l.typ)]=groups[sizeOf(l.typ)]||[]).push(l)});
+  $('lodeList').innerHTML=Object.keys(groups).sort((a,b)=>b-a).map(k=>`<div class="group"><h3>${SIZE_LABEL[k]||'Ostatní'} · ${groups[k].length}</h3><div class="list">${groups[k].map(l=>{
+    const s=lastSer(l.id);
+    const meta=[l.vyrobce,l.barva,l.kategorie,(l.nosnost_min||l.nosnost_max)?`nosnost ${l.nosnost_min?l.nosnost_min+'–':'do '}${l.nosnost_max||''} kg`:null,s?`seřízeno ${datum(s.datum)}`:'bez zapsaného seřízení'].filter(Boolean).map(esc).join(' · ');
+    return `<button type="button" class="item" data-id="${l.id}"><span class="typ">${esc(l.typ)}${l.typ_alt?`<br><small>${esc(l.typ_alt)}</small>`:''}</span><span class="name">${esc(lodName(l))}</span><span class="pill ${STAVY[l.stav]||''}">${esc(l.stav)}</span><span class="meta">${meta}</span></button>`}).join('')}</div></div>`).join('');
+}
+$('lodeList').addEventListener('click',e=>{const b=e.target.closest('.item');if(b)location.hash='lod-'+b.dataset.id});
+
+/* ---------- detail lodi ---------- */
+const LOD_FIELDS=[['nazev','Název','text'],['typ','Typ','text','např. 2x, 4x+, 8+'],['typ_alt','Druhé použití','text','např. 2- u dvojskifu'],['velikost','Označení','text','skif, čtyřka „s“…'],
+  ['vyrobce','Výrobce','text'],['barva','Barva','text'],['rok','Rok výroby','number'],['kategorie','Kategorie','text','komu loď slouží'],
+  ['nosnost_min','Nosnost od','number','kg na veslaře'],['nosnost_max','Nosnost do','number','kg na veslaře']];
+function boatForm(l){
+  return `<form id="fBoat" class="panel"><h2>${l.id?'Údaje o lodi':'Nová loď'}</h2><div class="grid">
+    ${LOD_FIELDS.map(([k,lab,t,h])=>`<div class="f"><label for="b_${k}">${lab}</label><input id="b_${k}" type="${t}" ${t==='number'?'inputmode="decimal" step="any"':''} value="${esc(l[k]??'')}" ${k==='typ'?'required':''}>${h?`<span class="hint">${h}</span>`:''}</div>`).join('')}
+    <div class="f"><label for="b_stav">Stav</label><select id="b_stav">${Object.keys(STAVY).map(s=>`<option ${s===(l.stav||'v provozu')?'selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="f" style="justify-content:flex-end"><label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="b_alt" style="width:auto" ${l.alt_krakorce?'checked':''}> Má i druhou sadu krakorců</label></div>
+    <div class="f full"><label for="b_pozn">Poznámka</label><textarea id="b_pozn">${esc(l.poznamka||'')}</textarea></div>
+  </div><div class="actions"><button class="btn" type="submit">${l.id?'Uložit změny':'Přidat loď'}</button>
+  ${l.id?`<span class="note">${l.updated_by?`Naposledy upravil ${esc(l.updated_by)}, ${new Date(l.updated_at).toLocaleString('cs-CZ')}`:''}</span>`:''}</div></form>`;
+}
+function readBoat(){
+  const o={};LOD_FIELDS.forEach(([k,,t])=>{const v=$('b_'+k).value.trim();o[k]=t==='number'?(v===''?null:Math.round(num(v))):(v||null)});
+  o.stav=$('b_stav').value;o.alt_krakorce=$('b_alt').checked;o.poznamka=$('b_pozn').value.trim()||null;return o;
+}
+function openLod(id,push=true){
+  if(push){location.hash='lod-'+id;return}
+  curLod=lode.find(x=>x.id===id);if(!curLod)return;
+  renderLod();show('vLod');
+}
+function serRows(s,scull){
+  const sada=sady.find(x=>x.id===s.sada_id);
+  const rows=[[scull?'Rozpětí':'Vyložení',scull?s.rozpeti:s.vylozeni,'cm'],['Vnitřní páka',s.paka,'cm'],['Délka vesla',s.delka_vesla,'cm'],
+    ['Sada vesel',sada?sada.nazev:null,''],[scull?'Havlinka P / L':'Havlinka',scull?(s.havlinka_p!=null||s.havlinka_l!=null?`${fmt(s.havlinka_p)} / ${fmt(s.havlinka_l)}`:null):s.havlinka_p,'cm'],
+    ['Pata od osy',s.pata_od_osy!=null?`${fmt(Math.abs(s.pata_od_osy))} ${s.pata_od_osy>=0?'k zádi':'ke špičce'}`:null,''],['Hloubka pat',s.hloubka_pat,'cm'],['Úhel nohavek',s.uhel_nohavek,'°'],
+    ['Kolejničky začátek',s.kolejnicky_zad!=null?`${fmt(Math.abs(s.kolejnicky_zad))} ${s.kolejnicky_zad>=0?'k zádi':'ke špičce'}`:null,''],['Kolejničky konec',s.kolejnicky_spicka!=null?`${fmt(s.kolejnicky_spicka)} ke špičce`:null,''],['Nakolmení',s.nakolmeni,'']];
+  return `<div class="kv">${rows.filter(r=>r[1]!=null&&r[1]!=='').map(([k,v,u])=>`<div><span>${k}</span><b>${esc(fmt(v))}${u&&typeof v==='number'?' '+u:''}</b></div>`).join('')}</div>${s.poznamka?`<p class="note">${esc(s.poznamka)}</p>`:''}<p class="note">Zapsal ${esc(s.created_by||'?')}</p>`;
+}
+function renderLod(){
+  const l=curLod, scull=isScull(l.typ), hist=ser.filter(s=>s.lod_id===l.id), cur=hist[0];
+  $('lodBody').innerHTML=`
+  <div class="panel"><div class="actions" style="justify-content:space-between"><h1>${esc(lodName(l))}</h1><span class="pill ${STAVY[l.stav]||''}">${esc(l.stav)}</span></div>
+   <p class="note">${esc([l.typ+(l.typ_alt?' / '+l.typ_alt:''),l.vyrobce,l.barva,l.kategorie].filter(Boolean).join(' · '))}</p></div>
+  <div class="panel"><div class="actions" style="justify-content:space-between"><h2>Aktuální seřízení</h2><button class="btn" type="button" id="newSer">Zapsat seřízení</button></div>
+   ${cur?`<p class="note">Platí od ${datum(cur.datum)}</p>${serRows(cur,scull)}`:'<p class="note">Zatím není zapsané žádné seřízení. Můžeš ho přenést z kalkulačky tlačítkem Zapsat do lodi, nebo vyplnit ručně.</p>'}
+   <div id="serForm"></div></div>
+  ${hist.length>1?`<div class="panel"><h2>Historie seřízení</h2><div class="hist">${hist.slice(1).map(s=>`<details><summary>${datum(s.datum)}<small>${esc(s.created_by||'')}</small></summary>${serRows(s,scull)}<div class="actions"><button class="btn danger small" type="button" data-del="${s.id}">Smazat záznam</button></div></details>`).join('')}</div></div>`:''}
+  ${boatForm(l)}
+  <div class="panel"><h2>Smazat loď</h2><p class="note">Loď, která odešla z klubu, raději označ stavem „vyřazená“. Smazáním zmizí i celá historie seřízení.</p>
+   <div class="actions"><button class="btn danger" type="button" id="delBoat">Smazat loď</button></div></div>`;
+  $('newSer').addEventListener('click',()=>serForm(l));
+  if(cur&&cur.id){const d=document.createElement('div');d.className='actions';d.innerHTML=`<button class="btn danger small" type="button" data-del="${cur.id}">Smazat tento záznam</button>`;$('serForm').before(d)}
+  $('fBoat').addEventListener('submit',async e=>{e.preventDefault();const o=readBoat();
+    const {data,error}=await sb.from('lode').update(o).eq('id',l.id).select().single();
+    if(error){toast('Uložení se nepovedlo: '+error.message);return}
+    Object.assign(l,data);toast('Uloženo');renderLod();});
+  $('delBoat').addEventListener('click',async e=>{const b=e.currentTarget;
+    if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='Opravdu smazat i s historií?';return}
+    const {error}=await sb.from('lode').delete().eq('id',l.id);
+    if(error){toast('Smazání se nepovedlo');return}
+    lode=lode.filter(x=>x.id!==l.id);ser=ser.filter(s=>s.lod_id!==l.id);toast('Loď smazána');location.hash='';});
+  $('lodBody').querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',async()=>{
+    if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='Opravdu smazat?';return}
+    const {error}=await sb.from('serizeni').delete().eq('id',b.dataset.del);
+    if(error){toast('Smazání se nepovedlo');return}
+    ser=ser.filter(s=>s.id!==b.dataset.del);toast('Záznam smazán');renderLod();}));
+  if(lsGet('serizeni-k-zapsani',null))serForm(l);
+}
+
+const SER_FIELDS=s=>[
+  s?['rozpeti','Rozpětí','cm, střed–střed sloupků']:['vylozeni','Vyložení','cm, osa lodi–sloupek'],
+  ['paka','Vnitřní páka','cm'],['delka_vesla','Délka vesla','cm'],
+  ['havlinka_p',s?'Havlinka pravá':'Výška havlinky','cm nad sedátkem'],
+  ...(s?[['havlinka_l','Havlinka levá','cm nad sedátkem']]:[]),
+  ['pata_od_osy','Pata nohavek od osy','cm; + k zádi, − ke špičce'],['hloubka_pat','Hloubka pat','cm pod sedátkem'],['uhel_nohavek','Úhel nohavek','°'],
+  ['kolejnicky_zad','Kolejničky začátek','cm; + k zádi od osy'],['kolejnicky_spicka','Kolejničky konec','cm ke špičce od osy']];
+function serForm(l){
+  const s=isScull(l.typ), p=lsGet('serizeni-k-zapsani',null)||{}, last=lastSer(l.id)||{};
+  const src=Object.keys(p).length?p:last;
+  const druh=s?'párová':'nepárová';
+  const opts=sady.filter(x=>x.druh===druh).map(x=>`<option value="${x.id}" ${src.sada_id===x.id?'selected':''}>${esc(x.nazev)} (${esc(x.lopatka)})</option>`).join('');
+  $('serForm').innerHTML=`<form id="fSer" style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px">
+   <p class="note">${Object.keys(p).length?`Předvyplněno z kalkulačky (${esc(p.popis||'')}). Zkontroluj a uprav podle skutečnosti v lodi.`:last.id?'Předvyplněno posledním seřízením. Změň, co se změnilo.':'Vyplň, co máš změřené. Prázdná pole nevadí.'}</p>
+   <div class="grid"><div class="f"><label for="s_datum">Datum</label><input id="s_datum" type="date" value="${new Date().toISOString().slice(0,10)}" required></div>
+   <div class="f"><label for="s_sada">Sada vesel</label><select id="s_sada"><option value="">—</option>${opts}</select></div>
+   ${SER_FIELDS(s).map(([k,lab,h])=>`<div class="f"><label for="s_${k}">${lab}</label><input id="s_${k}" type="number" inputmode="decimal" step="any" value="${src[k]??''}"><span class="hint">${h}</span></div>`).join('')}
+   <div class="f"><label for="s_nakolmeni">Nakolmení</label><input id="s_nakolmeni" type="text" value="${esc(src.nakolmeni??'')}"></div>
+   <div class="f full"><label for="s_poznamka">Poznámka</label><textarea id="s_poznamka" placeholder="Pro koho je loď seřízená, co se měnilo…">${esc(Object.keys(p).length?(p.poznamka||''):'')}</textarea></div></div>
+   <div class="actions"><button class="btn" type="submit">Uložit seřízení</button><button class="btn ghost" type="button" id="serCancel">Zrušit</button></div></form>`;
+  $('serCancel').addEventListener('click',()=>{$('serForm').innerHTML=''});
+  $('fSer').addEventListener('submit',async e=>{e.preventDefault();
+    const o={lod_id:l.id,datum:$('s_datum').value,sada_id:$('s_sada').value||null,nakolmeni:$('s_nakolmeni').value.trim()||null,poznamka:$('s_poznamka').value.trim()||null};
+    SER_FIELDS(s).forEach(([k])=>o[k]=num($('s_'+k).value));
+    const {data,error}=await sb.from('serizeni').insert(o).select().single();
+    if(error){toast('Uložení se nepovedlo: '+error.message);return}
+    ser.unshift(data);ser.sort((a,b)=>b.datum.localeCompare(a.datum)||String(b.created_at).localeCompare(String(a.created_at)));
+    lsSet('serizeni-k-zapsani',null);renderPending();toast('Seřízení uloženo');renderLod();});
+  $('serForm').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+$('addBoat').addEventListener('click',()=>{
+  curLod=null;$('lodBody').innerHTML=boatForm({stav:'v provozu'});show('vLod');
+  $('fBoat').addEventListener('submit',async e=>{e.preventDefault();
+    const {data,error}=await sb.from('lode').insert(readBoat()).select().single();
+    if(error){toast('Přidání se nepovedlo: '+error.message);return}
+    lode.push(data);toast('Loď přidána');location.hash='lod-'+data.id;});
+});
+
+/* ---------- vesla ---------- */
+const OAR_FIELDS=[['nazev','Název','text'],['paru','Počet párů','number'],['kategorie','Kategorie','text'],['delka_min','Délka od','number','cm'],['delka_max','Délka do','number','cm'],['paka_min','Páka od','number','cm'],['paka_max','Páka do','number','cm']];
+function renderVesla(){
+  renderPending();
+  const g={};sady.forEach(x=>{const k=x.druh+' · '+(x.lopatka==='Macon'?'Macon':'sekery');(g[k]=g[k]||[]).push(x)});
+  const keys=['párová · sekery','párová · Macon','nepárová · sekery','nepárová · Macon'].filter(k=>g[k]);
+  $('veslaList').innerHTML=sady.length?keys.map(k=>`<div class="group"><h3>${k} · ${g[k].reduce((a,x)=>a+(x.paru||0),0)} párů</h3><div class="list">${g[k].map(x=>`<button type="button" class="item oar" data-id="${x.id}"><span class="typ">${x.paru??'?'} p.</span><span class="name">${esc(x.nazev)}</span><span class="pill s-gar">${esc(x.kategorie||'')}</span><span class="meta">${esc([x.delka_min&&x.delka_max?`délka ${x.delka_min}–${x.delka_max} cm`:null,x.paka_min&&x.paka_max?`páka ${x.paka_min}–${x.paka_max} cm`:null,x.poznamka].filter(Boolean).join(' · ')||'bez dalších údajů')}</span></button>`).join('')}</div></div>`).join(''):'<div class="panel empty">Zatím tu nejsou žádné sady vesel.</div>';
+  $('oarForm').innerHTML='';
+}
+$('veslaList').addEventListener('click',e=>{const b=e.target.closest('.item');if(b)oarForm(sady.find(x=>x.id===b.dataset.id))});
+$('addOar').addEventListener('click',()=>oarForm({druh:'párová',lopatka:'sekera'}));
+function oarForm(x){
+  $('oarForm').innerHTML=`<form id="fOar" class="panel"><h2>${x.id?esc(x.nazev):'Nová sada vesel'}</h2><div class="grid">
+   <div class="f"><label for="o_druh">Druh</label><select id="o_druh">${['párová','nepárová'].map(v=>`<option ${v===x.druh?'selected':''}>${v}</option>`).join('')}</select></div>
+   <div class="f"><label for="o_lopatka">Lopatka</label><select id="o_lopatka">${['sekera','Macon'].map(v=>`<option ${v===x.lopatka?'selected':''}>${v}</option>`).join('')}</select></div>
+   ${OAR_FIELDS.map(([k,lab,t,h])=>`<div class="f"><label for="o_${k}">${lab}</label><input id="o_${k}" type="${t}" ${t==='number'?'inputmode="decimal" step="any"':''} value="${esc(x[k]??'')}" ${k==='nazev'?'required':''}>${h?`<span class="hint">${h}</span>`:''}</div>`).join('')}
+   <div class="f full"><label for="o_pozn">Poznámka</label><textarea id="o_pozn">${esc(x.poznamka||'')}</textarea></div></div>
+   <div class="actions"><button class="btn" type="submit">${x.id?'Uložit':'Přidat sadu'}</button><button class="btn ghost" type="button" id="oarCancel">Zavřít</button>${x.id?'<button class="btn danger" type="button" id="oarDel">Smazat sadu</button>':''}</div></form>`;
+  $('oarCancel').addEventListener('click',()=>{$('oarForm').innerHTML=''});
+  $('fOar').addEventListener('submit',async e=>{e.preventDefault();
+    const o={druh:$('o_druh').value,lopatka:$('o_lopatka').value,poznamka:$('o_pozn').value.trim()||null};
+    OAR_FIELDS.forEach(([k,,t])=>{const v=$('o_'+k).value.trim();o[k]=t==='number'?num(v):(v||null)});
+    const q=x.id?sb.from('sady_vesel').update(o).eq('id',x.id):sb.from('sady_vesel').insert(o);
+    const {data,error}=await q.select().single();
+    if(error){toast('Uložení se nepovedlo: '+error.message);return}
+    if(x.id)Object.assign(x,data);else sady.push(data);toast('Uloženo');renderVesla();});
+  if(x.id)$('oarDel').addEventListener('click',async e=>{const b=e.currentTarget;
+    if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='Opravdu smazat?';return}
+    const {error}=await sb.from('sady_vesel').delete().eq('id',x.id);
+    if(error){toast('Smazání se nepovedlo');return}
+    sady=sady.filter(y=>y.id!==x.id);toast('Sada smazána');renderVesla();});
+  $('oarForm').scrollIntoView({behavior:'smooth',block:'start'});
+}
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
+</script>
+</body>
+</html>

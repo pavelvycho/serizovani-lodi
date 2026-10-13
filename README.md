@@ -10,9 +10,13 @@ Kalkulačka výchozího seřízení veslařské lodi pro trenéry. Podle kategor
 
 Je to jeden statický web (HTML + CSS + JS bez knihoven a bez buildu). Funguje offline a dá se „nainstalovat“ na plochu telefonu.
 
-## Data
+## Lodě a vesla
 
-Svěřenci a rozsahy vesel se ukládají **do prohlížeče v zařízení** (localStorage). Každý trenér má svoje svěřence ve svém telefonu. Přenos mezi zařízeními nebo kolegovi: **Stáhnout zálohu svěřenců** → soubor `.json` → v druhém zařízení **Nahrát zálohu**.
+Stránka `lode.html` (záložky **Lodě** a **Vesla**) je společná evidence lodí, sad vesel a seřízení pro celý klub. Data jsou v databázi Supabase, přístup mají jen trenéři ze seznamu. Nastavení: `supabase/NAVOD.md`. V kalkulačce tlačítko **Zapsat do lodi** přenese spočítané seřízení do vybrané lodi.
+
+## Data kalkulačky
+
+Svěřenci a rozsahy vesel v kalkulačce se ukládají **do prohlížeče v zařízení** (localStorage). Každý trenér má svoje svěřence ve svém telefonu. Přenos mezi zařízeními nebo kolegovi: **Stáhnout zálohu svěřenců** → soubor `.json` → v druhém zařízení **Nahrát zálohu**.
 
 Vymazání dat prohlížeče svěřence smaže, proto občas stáhni zálohu.
 
