@@ -38,3 +38,10 @@ Odebrání = smazat řádek. Kdo není v tabulce, po přihlášení nic neuvidí
 - **Uspání projektu:** bezplatný projekt se po 7 dnech bez jediného přístupu uspí. V Supabase ho pak jedním klikem probudíš (**Restore**), data zůstanou. Při běžném používání se to nestane.
 - **Počet e-mailů:** vestavěné posílání e-mailů má nízký hodinový limit. Pro pár trenérů stačí; kdyby se kódy nedoručovaly, nastav vlastní SMTP (Authentication → Emails → SMTP Settings).
 - **Záloha:** Table Editor → tabulka → **Export to CSV**.
+
+## Docházka
+1. **SQL Editor → New query** → vlož `supabase/3-dochazka.sql` → **Run**. Vytvoří tabulky skupin, svěřenců, tréninků a docházky (přístup jen trenéři ze seznamu).
+2. Svěřence naimportuj souborem s jejich jmény, který dostaneš zvlášť (není v repozitáři), nebo je přidej v aplikaci: **Docházka → Svěřenci a skupiny**.
+3. Docházku vidí a zapisují všichni trenéři ze seznamu `treneri`.
+
+**Jména dětí do repozitáře nepatří.** Repozitář je veřejný – soubory se jmény nahrávej jen do Supabase. Pro jistotu můžeš repozitář přepnout na soukromý (GitHub → Settings → General → Danger Zone → Change visibility → Private); Vercel s ním funguje dál.
