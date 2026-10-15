@@ -185,9 +185,10 @@ td.pct{font-family:var(--mono)}
       <div class="panel" style="gap:8px">
         <div class="actions" style="justify-content:space-between">
           <h2 id="zTitle">Docházka</h2>
-          <button class="btn ghost small" type="button" id="allIn">Všichni byli</button>
+          <div class="actions"><button class="btn ghost small" type="button" id="noTr">Nebyl trénink</button><button class="btn ghost small" type="button" id="allIn">Všichni byli</button></div>
         </div>
         <div class="sum" id="sum"></div>
+        <div class="banner" id="noTrAsk" hidden><span id="noTrTxt"></span><button class="btn danger small" type="button" id="noTrYes">Ano, smazat</button><button class="btn ghost small" type="button" id="noTrNo">Ne</button></div>
         <p class="note">Ťuknutím přepínáš: byl → omluven → chyběl. Kdo zůstane nezapsaný, uloží se jako chyběl.</p>
       </div>
       <div class="roster" id="roster"></div>
@@ -200,7 +201,7 @@ td.pct{font-family:var(--mono)}
       </div>
       <div class="savebar">
         <span class="dirty" id="dirty"></span>
-        <div class="actions"><button class="btn danger small" type="button" id="delTr" hidden>Smazat trénink</button><button class="btn" type="button" id="save">Uložit docházku</button></div>
+        <div class="actions"><button class="btn" type="button" id="save">Uložit docházku</button></div>
       </div>
     </section>
 
@@ -342,8 +343,8 @@ async function loadZapis(){
   tr=data;stavy={};napln=new Set(tr?tr.napln:[]);
   if(tr){const r=await sb.from('dochazka').select('*').eq('trenink_id',tr.id);(r.data||[]).forEach(x=>stavy[x.sverenec_id]=x.stav)}
   $('naplnText').value=tr?tr.napln_text||'':'';$('pozn').value=tr?tr.poznamka||'':'';
-  $('meta').textContent=tr?`Zapsáno: ${tr.created_by||'?'}`:'Nový trénink, zatím neuložený.';
-  $('delTr').hidden=!tr;$('delTr').dataset.c='';$('delTr').textContent='Smazat trénink';
+  $('meta').textContent=tr?`Zapsáno: ${tr.created_by||'?'}`:'Tento den zatím není zapsaný. Když trénink nebyl, nic neukládej – den se do přehledu nezapočítá.';
+  $('noTrAsk').hidden=true;
   renderZapis();
 }
 function zapisKids(){const ids=new Set(Object.keys(stavy));return sverenci.filter(k=>k.skupina_id===grp&&k.aktivni||ids.has(k.id)).sort(byName)}
@@ -375,14 +376,18 @@ $('save').addEventListener('click',async()=>{
     const rows=zapisKids().map(k=>({trenink_id:tr.id,sverenec_id:k.id,stav:stavy[k.id]||'chybel'}));
     rows.forEach(x=>stavy[x.sverenec_id]=x.stav);
     if(rows.length){const d=await sb.from('dochazka').upsert(rows,{onConflict:'trenink_id,sverenec_id'});if(d.error){toast('Docházka se neuložila: '+d.error.message);return}}
-    setDirty(false);renderZapis();$('delTr').hidden=false;$('meta').textContent=`Zapsáno: ${tr.created_by||me.email}`;toast('Docházka uložena');
+    setDirty(false);renderZapis();$('meta').textContent=`Zapsáno: ${tr.created_by||me.email}`;toast('Docházka uložena');
   }finally{btn.disabled=false}
 });
-$('delTr').addEventListener('click',async()=>{const b=$('delTr');
-  if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='Opravdu smazat?';return}
+$('noTr').addEventListener('click',()=>{
+  if(!tr){setDirty(false);loadZapis();toast('Den bez tréninku – nic se neukládá ani nepočítá.');return}
+  $('noTrTxt').textContent=`Opravdu chceš smazat zápis tréninku z ${fmtD(tr.datum)} včetně docházky?`;$('noTrAsk').hidden=false;});
+$('noTrNo').addEventListener('click',()=>{$('noTrAsk').hidden=true});
+$('noTrYes').addEventListener('click',async()=>{
   const {error}=await sb.from('treninky').delete().eq('id',tr.id);
+  $('noTrAsk').hidden=true;
   if(error){toast('Smazání se nepovedlo');return}
-  toast('Trénink smazán');loadZapis();});
+  setDirty(false);toast('Zápis smazán – den se do přehledu nepočítá');loadZapis();});
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
 
 /* ---------- přehled ---------- */
