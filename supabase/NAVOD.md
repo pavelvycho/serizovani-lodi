@@ -43,5 +43,6 @@ Odebrání = smazat řádek. Kdo není v tabulce, po přihlášení nic neuvidí
 1. **SQL Editor → New query** → vlož `supabase/3-dochazka.sql` → **Run**. Vytvoří tabulky skupin, svěřenců, tréninků a docházky (přístup jen trenéři ze seznamu).
 2. Svěřence naimportuj souborem s jejich jmény, který dostaneš zvlášť (není v repozitáři), nebo je přidej v aplikaci: **Docházka → Svěřenci a skupiny**.
 3. Docházku vidí a zapisují všichni trenéři ze seznamu `treneri`.
+4. Pro tlačítko „Nebyl trénink“ spusť jednou `supabase/5-nekonal.sql` (přidá sloupec `nekonal`). U nových instalací je už v `3-dochazka.sql`.
 
 **Jména dětí do repozitáře nepatří.** Repozitář je veřejný – soubory se jmény nahrávej jen do Supabase. Pro jistotu můžeš repozitář přepnout na soukromý (GitHub → Settings → General → Danger Zone → Change visibility → Private); Vercel s ním funguje dál.
