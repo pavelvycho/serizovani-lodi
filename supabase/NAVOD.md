@@ -46,3 +46,8 @@ Odebrání = smazat řádek. Kdo není v tabulce, po přihlášení nic neuvidí
 4. Pro tlačítko „Nebyl trénink“ spusť jednou `supabase/5-nekonal.sql` (přidá sloupec `nekonal`). U nových instalací je už v `3-dochazka.sql`.
 
 **Jména dětí do repozitáře nepatří.** Repozitář je veřejný – soubory se jmény nahrávej jen do Supabase. Pro jistotu můžeš repozitář přepnout na soukromý (GitHub → Settings → General → Danger Zone → Change visibility → Private); Vercel s ním funguje dál.
+
+## Výkony
+1. **SQL Editor → New query** → vlož `supabase/6-vykony.sql` → **Run**. Přidá tabulky disciplín, biometrie a výsledků, pohlaví u svěřenců a 14 výchozích disciplín.
+2. Historické výsledky naimportuj souborem, který dostaneš zvlášť (obsahuje jména – na GitHub nepatří).
+3. Body SCM se počítají z `scm-normy-2026.js` (tabulka ČVS 2026). Ročníky mimo tabulku se počítají podle nejbližšího ročníku. Na nový rok stačí přidat nový soubor s normami.
