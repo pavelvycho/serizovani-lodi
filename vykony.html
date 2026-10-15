@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0D6B70">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Seřízení lodi">
+<title>Výkony</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+
+/* Layout: loděnice — horní lišta s přepínačem Kalkulačka / Lodě / Vesla, seznam lodí po velikostech, detail lodi s historií seřízení */
+:root{
+  --bg:#F3F6F5; --paper:#FFFFFF; --ink:#13232A; --muted:#5B6E73; --line:#D5DFDE;
+  --water:#0D6B70; --water-soft:#E1EFEE; --blade:#C27419; --blade-soft:#FBEEDC;
+  --ok:#2E7D4F; --ok-soft:#E3F2E8; --warn:#B26A00; --warn-soft:#FDF0DA; --bad:#B23A3A; --bad-soft:#F8E3E3;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0E1719; --paper:#152225; --ink:#E4ECEB; --muted:#93A6A8; --line:#26383B;
+  --water:#4DB6B3; --water-soft:#183236; --blade:#E79A3E; --blade-soft:#33261A;
+  --ok:#6CC08F; --ok-soft:#183223; --warn:#E3A84B; --warn-soft:#33281A; --bad:#E07B7B; --bad-soft:#3A1F1F; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.top{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+.top-in{max-width:900px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-family:var(--display);font-weight:700;font-size:1.3rem;letter-spacing:.02em;margin-right:auto}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap}
+nav.tabs a,nav.tabs button{font:inherit;font-weight:600;font-size:.95rem;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px;cursor:pointer}
+nav.tabs [aria-current="page"]{background:var(--water);border-color:var(--water);color:var(--paper)}
+.who{font-size:.85rem;color:var(--muted);display:flex;gap:8px;align-items:center}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:18px 60px;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;line-height:1.05;margin:0}
+h2{font-family:var(--display);font-weight:600;font-size:1.35rem;margin:0;letter-spacing:.02em}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.note{font-size:.88rem;color:var(--muted);margin:0;max-width:70ch}
+.btn{font:inherit;font-weight:600;border-radius:6px;padding:8px 14px;cursor:pointer;border:1px solid var(--water);background:var(--water);color:var(--paper)}
+.btn.ghost{background:transparent;color:var(--water)}
+.btn.small{padding:4px 10px;font-size:.9rem}
+.btn.danger{border-color:var(--bad);background:transparent;color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--blade);outline-offset:2px}
+input,select,textarea{font:inherit;font-size:1rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);width:100%}
+input[type="number"]{font-family:var(--mono)}
+textarea{min-height:70px;resize:vertical}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.f label{font-size:.85rem;font-weight:600}
+.f .hint{font-size:.75rem;color:var(--muted)}
+.f.full{grid-column:1/-1}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar input{flex:1 1 180px;width:auto}
+.toolbar select{width:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:inherit;font-size:.9rem;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:4px 11px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--water);border-color:var(--water);color:var(--paper)}
+.group h3{font-family:var(--display);font-weight:600;font-size:1.05rem;text-transform:uppercase;letter-spacing:.08em;color:var(--water);margin:6px 0 6px}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.item:hover{border-color:var(--water)}
+.typ{font-family:var(--mono);font-size:.9rem;background:var(--water-soft);color:var(--water);border-radius:4px;padding:1px 6px;text-align:center;min-width:44px}
+.item .name{font-weight:700}
+.item .meta{font-size:.85rem;color:var(--muted);grid-column:2/4}
+.pill{font-size:.75rem;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.s-ok{background:var(--ok-soft);color:var(--ok)}
+.s-gar{background:var(--water-soft);color:var(--water)}
+.s-np{background:var(--warn-soft);color:var(--warn)}
+.s-vy{background:var(--bad-soft);color:var(--bad)}
+.empty{padding:20px;text-align:center;color:var(--muted)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 16px}
+.kv div{display:flex;flex-direction:column}
+.kv span{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.kv b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hist details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--bg)}
+.hist summary{cursor:pointer;font-weight:600}
+.hist summary small{font-weight:400;color:var(--muted);margin-left:6px}
+.banner{background:var(--blade-soft);border-left:3px solid var(--blade);padding:10px 12px;border-radius:4px;font-size:.92rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:.92rem;z-index:20;max-width:calc(100% - 32px)}
+.back{font:inherit;background:none;border:0;color:var(--water);cursor:pointer;padding:0;font-weight:600}
+.code{font-family:var(--mono);letter-spacing:.3em;font-size:1.3rem;text-align:center}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0}
+legend{font-size:.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:0 4px}
+.oar .typ{min-width:70px}
+
+/* Výkony: seznam svěřenců → karta s biometrií, body SCM a historií výkonů; hromadný zápis a porovnání */
+.sub{display:flex;gap:4px;flex-wrap:wrap}
+.sub button{font:inherit;font-weight:600;font-size:.9rem;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+.sub button[aria-pressed="true"]{border-color:var(--water);color:var(--water);background:var(--water-soft)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;font-size:.9rem;width:100%}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:middle}
+th{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr.off td{color:var(--muted)}
+td input{min-width:90px;padding:6px 8px}
+td input.bad{border-color:var(--bad);background:var(--bad-soft)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.dcard{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.dcard h3{margin:0;font-family:var(--display);font-weight:600;font-size:1.1rem;letter-spacing:.02em}
+.dcard .pb{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.dcard .pb b{font-family:var(--mono);font-weight:500;font-size:1.25rem;color:var(--water)}
+.dcard .pb span{font-size:.8rem;color:var(--muted)}
+.dcard svg{width:100%;height:56px;display:block}
+.dcard details summary{cursor:pointer;font-size:.85rem;color:var(--water);font-weight:600}
+.hl{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.hl div{display:flex;justify-content:space-between;gap:8px;font-size:.88rem;align-items:center}
+.hl b{font-family:var(--mono);font-weight:500}
+.hl .x{font:inherit;border:0;background:none;color:var(--muted);cursor:pointer;padding:2px 6px}
+.hl .x.c{color:var(--bad);font-weight:600}
+.badge{font-size:.72rem;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--water-soft);color:var(--water)}
+.badge.pr{background:var(--blade-soft);color:var(--blade)}
+.scmlist{display:flex;flex-direction:column}
+.scmlist div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.scmlist .pts{font-family:var(--mono);font-weight:500;font-size:1.15rem;min-width:2.5em;text-align:right}
+.big{font-family:var(--mono);font-size:1.6rem;color:var(--blade)}
+.head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.head h1 small{display:block;font-family:var(--body);font-size:.95rem;font-weight:400;color:var(--muted);margin-top:4px}
+.bio{display:flex;gap:18px;flex-wrap:wrap}
+.bio div{display:flex;flex-direction:column}
+.bio span{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.bio b{font-family:var(--mono);font-weight:500;font-size:1.2rem}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="brand">Seřízení lodi</div>
+  <nav class="tabs" aria-label="Sekce">
+    <a href="./">Kalkulačka</a>
+    <a href="lode.html">Lodě</a>
+    <a href="dochazka.html">Docházka</a>
+    <a href="vykony.html" aria-current="page">Výkony</a>
+  </nav>
+  <div class="who" id="who" hidden><span id="whoTxt"></span><button class="btn ghost small" id="logout" type="button">Odhlásit</button></div>
+</div></header>
+
+<main class="wrap">
+  <section class="panel" id="vSetup" hidden><h1>Databáze není připojená</h1><p class="note">V souboru <code>config.js</code> chybí adresa a klíč Supabase.</p></section>
+  <section class="panel" id="vLogin" hidden>
+    <h1>Přihlášení trenéra</h1>
+    <p class="note">Přihlas se e-mailem ze seznamu trenérů. Pošleme ti šestimístný kód.</p>
+    <form id="fEmail" class="actions"><div class="f" style="flex:1 1 240px"><label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required></div><button class="btn" type="submit" style="align-self:flex-end">Poslat kód</button></form>
+    <form id="fCode" class="actions" hidden><div class="f" style="flex:1 1 200px"><label for="code">Kód z e-mailu</label><input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required></div><button class="btn" type="submit" style="align-self:flex-end">Přihlásit</button><button class="btn ghost" type="button" id="codeBack" style="align-self:flex-end">Jiný e-mail</button></form>
+    <p class="note" id="loginMsg"></p>
+  </section>
+  <section class="panel" id="vDenied" hidden><h1>Nemáš přístup</h1><p class="note">E-mail <b id="deniedMail"></b> není v seznamu trenérů.</p></section>
+
+  <div id="vApp" hidden style="display:flex;flex-direction:column;gap:14px">
+    <div class="sub">
+      <button type="button" data-v="seznam" aria-pressed="true">Svěřenci</button>
+      <button type="button" data-v="zapis" aria-pressed="false">Zápis výsledků</button>
+      <button type="button" data-v="porovnani" aria-pressed="false">Porovnání</button>
+    </div>
+
+    <!-- seznam -->
+    <section id="vSeznam" style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel">
+        <div class="toolbar"><input id="q" type="search" placeholder="Hledat jméno…" aria-label="Hledat"><select id="fGrp" aria-label="Skupina"></select></div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="fOff" style="width:auto"> Zobrazit i neaktivní</label>
+      </div>
+      <div class="list" id="kidList"></div>
+    </section>
+
+    <!-- karta -->
+    <section id="vKarta" hidden style="display:flex;flex-direction:column;gap:14px">
+      <button class="back" type="button" id="backList">← Zpět na svěřence</button>
+      <div id="karta" style="display:flex;flex-direction:column;gap:14px"></div>
+    </section>
+
+    <!-- zápis -->
+    <section id="vZapis" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel">
+        <h2>Hromadný zápis</h2>
+        <div class="grid">
+          <div class="f"><label for="zDisc">Disciplína</label><select id="zDisc"></select></div>
+          <div class="f"><label for="zDatum">Datum</label><input type="date" id="zDatum"></div>
+          <div class="f"><label for="zGrp">Kdo</label><select id="zGrp"></select></div>
+          <div class="f"><label for="zPozn">Poznámka ke všem</label><input type="text" id="zPozn" placeholder="např. Mezi mosty, 1x, vítr"></div>
+        </div>
+        <p class="note" id="zHint"></p>
+      </div>
+      <div class="tablewrap" id="zTable"></div>
+      <div class="actions"><button class="btn" type="button" id="zSave">Uložit výsledky</button><span class="note" id="zMsg"></span></div>
+      <details class="panel" id="discAdmin"><summary>Disciplíny <small>přidat novou</small></summary><div id="discList" class="note"></div><div id="discForm"></div></details>
+    </section>
+
+    <!-- porovnání -->
+    <section id="vPorovnani" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel">
+        <div class="grid">
+          <div class="f"><label for="pDisc">Disciplína</label><select id="pDisc"></select></div>
+          <div class="f"><label for="pMode">Co porovnat</label><select id="pMode"></select></div>
+          <div class="f"><label for="pRoc">Ročník</label><select id="pRoc"></select></div>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="pOff" style="width:auto" checked> Včetně neaktivních</label>
+      </div>
+      <div class="tablewrap" id="pTable"></div>
+    </section>
+  </div>
+  <p class="note" id="loading" hidden>Načítám…</p>
+</main>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="scm-normy-2026.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let toastT;function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3200)}
+const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*60000);return z.toISOString().slice(0,10)};
+const today=()=>iso(new Date());
+const fmtD=s=>{const d=new Date(s+'T12:00:00');return d.getDate()+'. '+(d.getMonth()+1)+'. '+d.getFullYear()};
+const numCz=v=>String(Math.round(v*100)/100).replace('.',',');
+
+/* ---------- čas a hodnoty ---------- */
+function parseVal(disc,str){
+  str=String(str||'').trim().replace(/\s/g,'');if(!str)return null;
+  if(disc.typ==='cas'){
+    const p=str.replace(',','.').split(':');
+    if(p.some(x=>x===''||isNaN(+x)))return NaN;
+    if(p.length===1)return +p[0];
+    if(p.length===2)return +p[0]*60+ +p[1];
+    if(p.length===3)return +p[0]*3600+ +p[1]*60+ +p[2];
+    return NaN;
+  }
+  const n=+str.replace(',','.');return isNaN(n)?NaN:n;
+}
+function fmtCas(s){
+  if(s==null)return '—';
+  const h=Math.floor(s/3600),m=Math.floor(s%3600/60),sec=s%60;
+  const ss=(Math.round(sec*10)/10).toFixed(1).padStart(4,'0').replace('.',',');
+  return (h?h+':'+String(m).padStart(2,'0'):m)+':'+ss;
+}
+const fmtVal=(d,v)=>v==null?'—':d.typ==='cas'?fmtCas(v):numCz(v)+(d.jednotka?' '+d.jednotka:'');
+const inputVal=(d,v)=>v==null?'':d.typ==='cas'?fmtCas(v):numCz(v);
+const tempo=(d,v)=>d.typ==='cas'&&d.vzdalenost&&v?fmtCas(v/(d.vzdalenost/500)):null;
+const better=(d,a,b)=>d.lepsi==='nizsi'?a<b:a>b;
+
+/* ---------- body SCM ---------- */
+const N=window.SCM_NORMY;
+function scmBody(key,val,rocnik,pohlavi){
+  if(!N||!N.testy[key]||val==null||!rocnik)return null;
+  const T=N.testy[key], ys=N.rocniky, y=Math.min(Math.max(rocnik,ys[0]),ys[ys.length-1]);
+  const tab=(T.data[pohlavi==='Z'?'Z':'M']||{})[y];if(!tab)return null;
+  const ps=Object.keys(tab).map(Number).sort((a,b)=>b-a);
+  for(const p of ps){const t=tab[p];if(T.lepsi==='nizsi'?val<=t+1e-9:val>=t-1e-9)return p}
+  return 0;
+}
+const scmRocnik=r=>{if(!N||!r)return null;const ys=N.rocniky;return Math.min(Math.max(r,ys[0]),ys[ys.length-1])};
+
+/* ---------- přihlášení ---------- */
+const VIEWS=['vSetup','vLogin','vDenied','vApp'];
+function show(v){VIEWS.forEach(x=>$(x).hidden=x!==v)}
+const cfg=window.SERIZENI_CONFIG||{};
+if(!cfg.supabaseUrl||!cfg.supabaseAnonKey||!window.supabase){show('vSetup');return}
+const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+let loginEmail='', me=null, loaded=false;
+$('fEmail').addEventListener('submit',async e=>{e.preventDefault();loginEmail=$('email').value.trim();$('loginMsg').textContent='Posílám kód…';
+  const {error}=await sb.auth.signInWithOtp({email:loginEmail,options:{shouldCreateUser:true,emailRedirectTo:location.href.split('#')[0].split('?')[0]}});
+  if(error){$('loginMsg').textContent='Kód se nepodařilo poslat: '+error.message;return}
+  $('fEmail').hidden=true;$('fCode').hidden=false;$('code').focus();$('loginMsg').textContent=`Kód jsme poslali na ${loginEmail}.`;});
+$('fCode').addEventListener('submit',async e=>{e.preventDefault();
+  const {error}=await sb.auth.verifyOtp({email:loginEmail,token:$('code').value.trim(),type:'email'});
+  if(error)$('loginMsg').textContent='Kód nesedí nebo vypršel.';});
+$('codeBack').addEventListener('click',()=>{$('fCode').hidden=true;$('fEmail').hidden=false;$('loginMsg').textContent=''});
+$('logout').addEventListener('click',()=>sb.auth.signOut());
+// Supabase: v callbacku nesmí běžet další dotazy – proto odklad.
+sb.auth.onAuthStateChange((ev,s)=>{setTimeout(()=>handleSession(s),0)});
+sb.auth.getSession().then(({data})=>handleSession(data.session));
+let handling=null;
+async function handleSession(session){
+  const u=session&&session.user;
+  if(!u){me=null;loaded=false;$('who').hidden=true;$('fEmail').hidden=false;$('fCode').hidden=true;show('vLogin');return}
+  if(loaded&&me&&me.email===u.email)return; if(handling)return handling;
+  handling=(async()=>{
+    me={email:u.email};$('who').hidden=false;$('whoTxt').textContent=u.email;$('loading').hidden=false;
+    const {data:t}=await sb.from('treneri').select('email').ilike('email',u.email).maybeSingle();
+    if(!t){$('loading').hidden=true;$('deniedMail').textContent=u.email;show('vDenied');return}
+    const ok=await loadAll();$('loading').hidden=true;if(!ok)return;
+    loaded=true;show('vApp');init();
+  })();
+  try{await handling}finally{handling=null}
+}
+
+/* ---------- data ---------- */
+let sverenci=[], skupiny=[], disc=[], vys=[], bio=[];
+async function loadAll(){
+  const r=await Promise.all([sb.from('sverenci').select('*'),sb.from('skupiny').select('*').order('nazev'),sb.from('discipliny').select('*').order('poradi'),
+    sb.from('vysledky').select('*').order('datum'),sb.from('biometrie').select('*').order('datum')]);
+  if(r.some(x=>x.error)){toast('Data se nepodařilo načíst. Je spuštěný skript 6-vykony.sql?');return false}
+  [sverenci,skupiny,disc,vys,bio]=r.map(x=>x.data);return true;
+}
+const kidName=k=>[k.prijmeni,k.jmeno].filter(Boolean).join(' ');
+const byName=(a,b)=>kidName(a).localeCompare(kidName(b),'cs');
+const D=id=>disc.find(d=>d.id===id);
+const kidVys=(id,did)=>vys.filter(v=>v.sverenec_id===id&&(!did||v.disciplina_id===did));
+const lastBio=id=>{const b=bio.filter(x=>x.sverenec_id===id);const pick=k=>{for(let i=b.length-1;i>=0;i--)if(b[i][k]!=null)return b[i];return null};return{vyska:pick('vyska'),vaha:pick('vaha'),rozpeti:pick('rozpeti')}};
+function best(d,list){let b=null;list.forEach(v=>{if(!b||better(d,+v.hodnota,+b.hodnota))b=v});return b}
+
+/* ---------- navigace ---------- */
+let view='seznam';
+function setView(v){view=v;document.querySelectorAll('.sub button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v||(v==='karta'&&x.dataset.v==='seznam')));
+  $('vSeznam').hidden=v!=='seznam';$('vKarta').hidden=v!=='karta';$('vZapis').hidden=v!=='zapis';$('vPorovnani').hidden=v!=='porovnani';window.scrollTo(0,0)}
+document.querySelector('.sub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.v==='seznam'){location.hash='';route();return}
+  history.replaceState(null,'',location.pathname+'#'+b.dataset.v);route();});
+window.addEventListener('hashchange',()=>{if(loaded)route()});
+$('backList').addEventListener('click',()=>{location.hash=''});
+function route(){
+  const h=location.hash.slice(1);
+  if(h.startsWith('s-')&&sverenci.some(k=>k.id===h.slice(2))){renderKarta(h.slice(2));setView('karta');return}
+  if(h==='zapis'){renderZapis();setView('zapis');return}
+  if(h==='porovnani'){renderPor();setView('porovnani');return}
+  renderList();setView('seznam');
+}
+function init(){
+  $('fGrp').innerHTML='<option value="">Všechny skupiny</option>'+skupiny.map(g=>`<option value="${g.id}">${esc(g.nazev)}</option>`).join('')+'<option value="-">Bez skupiny</option>';
+  $('zDatum').value=today();
+  fillDiscSelects();route();
+}
+function fillDiscSelects(){
+  const opts=disc.filter(d=>d.aktivni).map(d=>`<option value="${d.id}">${esc(d.nazev)}</option>`).join('');
+  const zv=$('zDisc').value,pv=$('pDisc').value;
+  $('zDisc').innerHTML='<option value="bio">Biometrie (výška, váha, rozpětí)</option>'+opts;
+  $('pDisc').innerHTML=opts;
+  if(zv)$('zDisc').value=zv; if(pv)$('pDisc').value=pv;
+  $('zGrp').innerHTML=skupiny.filter(g=>g.aktivni).map(g=>`<option value="${g.id}">${esc(g.nazev)}</option>`).join('')+'<option value="*">Všichni aktivní</option>';
+}
+
+/* ---------- seznam ---------- */
+['q','fGrp','fOff'].forEach(id=>$(id).addEventListener('input',renderList));
+function renderList(){
+  const q=$('q').value.trim().toLowerCase(), g=$('fGrp').value, off=$('fOff').checked;
+  const list=sverenci.filter(k=>(off||k.aktivni)&&(!g||(g==='-'?!k.skupina_id:k.skupina_id===g))&&(!q||kidName(k).toLowerCase().includes(q))).sort(byName);
+  $('kidList').innerHTML=list.length?list.map(k=>{
+    const n=kidVys(k.id).length, b=lastBio(k.id);
+    const meta=[k.rocnik,k.kategorie,b.vyska?b.vyska.vyska+' cm':null,b.vaha?numCz(b.vaha.vaha)+' kg':null,n?`${n} výsledků`:'bez výsledků'].filter(Boolean).map(esc).join(' · ');
+    return `<button type="button" class="item" data-id="${k.id}"><span class="typ">${esc(k.rocnik||'—')}</span><span class="name">${esc(kidName(k))}</span><span class="pill ${k.aktivni?'s-ok':'s-vy'}">${k.aktivni?'aktivní':'neaktivní'}</span><span class="meta">${meta}</span></button>`}).join('')
+    :'<div class="panel empty">Nikdo neodpovídá filtru.</div>';
+}
+$('kidList').addEventListener('click',e=>{const b=e.target.closest('.item');if(b)location.hash='s-'+b.dataset.id});
+
+/* ---------- karta svěřence ---------- */
+function spark(d,list){
+  if(list.length<2)return '';
+  const W=300,H=56,P=6, xs=list.map(v=>new Date(v.datum).getTime()), ys=list.map(v=>+v.hodnota);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const X=t=>P+(x1===x0?0.5:(t-x0)/(x1-x0))*(W-2*P);
+  const Y=v=>{let r=y1===y0?0.5:(v-y0)/(y1-y0);if(d.lepsi==='nizsi')r=1-r;return H-P-r*(H-2*P)};
+  const pts=list.map((v,i)=>`${X(xs[i]).toFixed(1)},${Y(ys[i]).toFixed(1)}`).join(' ');
+  const L=list.length-1;
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--water)" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="${X(xs[L])}" cy="${Y(ys[L])}" r="3.5" fill="var(--blade)"/></svg>`;
+}
+function renderKarta(id){
+  const k=sverenci.find(x=>x.id===id), g=skupiny.find(x=>x.id===k.skupina_id), b=lastBio(id);
+  const kb=bio.filter(x=>x.sverenec_id===id).slice().reverse();
+  // SCM
+  let scmHtml='';
+  if(N){
+    const yr=scmRocnik(k.rocnik);
+    const rows=[];let total=0;
+    const anth=[['vyska','Výška',b.vyska&&+b.vyska.vyska],['rozpeti','Rozpětí paží',b.rozpeti&&+b.rozpeti.rozpeti]].map(([key,lab,val])=>({lab,val,p:val?scmBody(key,val,k.rocnik,k.pohlavi):null}));
+    const ap=Math.max(...anth.map(a=>a.p??-1));
+    if(ap>=0){total+=ap;rows.push(`<div><span>Antropometrie<small class="note" style="display:block">${anth.map(a=>a.val?`${a.lab.toLowerCase()} ${numCz(a.val)} cm`:'').filter(Boolean).join(', ')}</small></span><b class="pts">${ap}</b></div>`)}
+    disc.filter(d=>d.scm).forEach(d=>{const l=kidVys(id,d.id);if(!l.length)return;const v=l[l.length-1];const p=scmBody(d.scm,+v.hodnota,k.rocnik,k.pohlavi);if(p==null)return;total+=p;
+      rows.push(`<div><span>${esc(d.nazev)}<small class="note" style="display:block">${fmtVal(d,+v.hodnota)} · ${fmtD(v.datum)}</small></span><b class="pts">${p}</b></div>`)});
+    scmHtml=rows.length?`<div class="panel scm"><div class="head"><h2>Body SCM</h2><span class="big">${total} b.</span></div>
+      <div class="scmlist">${rows.join('')}</div>
+      <p class="note">Normy SCM ${N.rok}${yr&&yr!==k.rocnik?`, ročník ${k.rocnik} počítán podle tabulky ${yr}`:''}${k.pohlavi==='Z'?', dívky':', chlapci'}. Antropometrie = vyšší z bodů za výšku a rozpětí paží. Body jsou orientační, rozhoduje oficiální vyhodnocení.</p></div>`:'';
+  }
+  // výkony
+  const ds=disc.filter(d=>kidVys(id,d.id).length);
+  const cards=ds.map(d=>{const l=kidVys(id,d.id), pb=best(d,l), last=l[l.length-1], tp=tempo(d,+pb.hodnota);
+    return `<div class="dcard"><h3>${esc(d.nazev)}</h3>
+      <div class="pb"><span>Osobní rekord</span><b>${fmtVal(d,+pb.hodnota)}</b></div>
+      <div class="pb"><span>${fmtD(pb.datum)}${tp?` · tempo ${tp}/500 m`:''}</span>${last!==pb?`<span>poslední ${fmtVal(d,+last.hodnota)}</span>`:''}</div>
+      ${spark(d,l)}
+      <details><summary>Historie (${l.length})</summary><div class="hl">${l.slice().reverse().map(v=>`<div><span>${fmtD(v.datum)}${v.poznamka?` <small class="note">${esc(v.poznamka)}</small>`:''}</span><span><b>${fmtVal(d,+v.hodnota)}</b>${v===pb?' <span class="badge pr">OR</span>':''}<button type="button" class="x" data-delv="${v.id}" aria-label="Smazat">×</button></span></div>`).join('')}</div></details></div>`}).join('');
+  $('karta').innerHTML=`
+  <div class="panel"><div class="head"><h1>${esc(kidName(k))}<small>${esc([k.rocnik,k.kategorie,g?g.nazev:null,k.aktivni?null:'neaktivní'].filter(Boolean).join(' · '))}</small></h1>
+    <div class="actions"><a class="btn ghost small" id="toCalc" href="#">Otevřít v kalkulačce</a></div></div>
+    <div class="bio"><div><span>Výška</span><b>${b.vyska?numCz(b.vyska.vyska)+' cm':'—'}</b></div><div><span>Váha</span><b>${b.vaha?numCz(b.vaha.vaha)+' kg':'—'}</b></div><div><span>Rozpětí paží</span><b>${b.rozpeti?numCz(b.rozpeti.rozpeti)+' cm':'—'}</b></div>
+    <div><span>Pohlaví</span><select id="kPoh" style="width:auto;padding:4px 8px"><option value="M" ${k.pohlavi!=='Z'?'selected':''}>chlapec</option><option value="Z" ${k.pohlavi==='Z'?'selected':''}>dívka</option></select></div></div>
+    <details><summary class="note" style="cursor:pointer">Měření (${kb.length}) a nové měření</summary>
+      <div class="hl">${kb.map(x=>`<div><span>${fmtD(x.datum)}</span><span><b>${[x.vyska?numCz(x.vyska)+' cm':null,x.vaha?numCz(x.vaha)+' kg':null,x.rozpeti?'rozpětí '+numCz(x.rozpeti)+' cm':null].filter(Boolean).join(' · ')}</b><button type="button" class="x" data-delb="${x.id}" aria-label="Smazat">×</button></span></div>`).join('')||'<div class="note">Zatím žádné měření.</div>'}</div>
+      <form id="fBio" class="grid" style="margin-top:8px"><div class="f"><label for="bDat">Datum</label><input type="date" id="bDat" value="${today()}" required></div>
+        <div class="f"><label for="bV">Výška (cm)</label><input id="bV" inputmode="decimal"></div><div class="f"><label for="bW">Váha (kg)</label><input id="bW" inputmode="decimal"></div><div class="f"><label for="bR">Rozpětí paží (cm)</label><input id="bR" inputmode="decimal"></div>
+        <div class="f" style="justify-content:flex-end"><button class="btn small" type="submit">Uložit měření</button></div></form>
+    </details></div>
+  ${scmHtml}
+  <div class="panel"><h2>Výkony</h2>${cards?`<div class="cards">${cards}</div>`:'<p class="note">Zatím žádné výsledky.</p>'}
+    <details><summary class="note" style="cursor:pointer;font-weight:600;color:var(--water)">Přidat výsledek</summary>
+      <form id="fVys" class="grid" style="margin-top:8px"><div class="f"><label for="vD">Disciplína</label><select id="vD">${disc.filter(d=>d.aktivni).map(d=>`<option value="${d.id}">${esc(d.nazev)}</option>`).join('')}</select></div>
+        <div class="f"><label for="vDat">Datum</label><input type="date" id="vDat" value="${today()}" required></div>
+        <div class="f"><label for="vH">Výsledek</label><input id="vH" required placeholder="6:57,8 nebo číslo"></div>
+        <div class="f"><label for="vP">Poznámka</label><input id="vP" placeholder="loď, akce…"></div>
+        <div class="f" style="justify-content:flex-end"><button class="btn small" type="submit">Uložit</button></div></form></details></div>`;
+  $('toCalc').href='./?'+new URLSearchParams(Object.fromEntries(Object.entries({name:kidName(k),rocnik:k.rocnik||'',pohlavi:k.pohlavi||'M',h:b.vyska?b.vyska.vyska:'',w:b.vaha?b.vaha.vaha:'',arm:b.rozpeti?b.rozpeti.rozpeti:''}).filter(([,v])=>v!==''))).toString();
+  $('kPoh').addEventListener('change',async e=>{const {error}=await sb.from('sverenci').update({pohlavi:e.target.value}).eq('id',id);if(error){toast('Uložení se nepovedlo');return}k.pohlavi=e.target.value;toast('Uloženo');renderKarta(id)});
+  $('fBio').addEventListener('submit',async e=>{e.preventDefault();
+    const nv=x=>{const v=$(x).value.trim();return v===''?null:+v.replace(',','.')};
+    const o={sverenec_id:id,datum:$('bDat').value,vyska:nv('bV'),vaha:nv('bW'),rozpeti:nv('bR')};
+    if(o.vyska==null&&o.vaha==null&&o.rozpeti==null){toast('Vyplň aspoň jednu hodnotu');return}
+    if([o.vyska,o.vaha,o.rozpeti].some(v=>v!=null&&isNaN(v))){toast('Hodnoty piš jako čísla');return}
+    const {data,error}=await sb.from('biometrie').insert(o).select().single();if(error){toast('Uložení se nepovedlo: '+error.message);return}
+    bio.push(data);bio.sort((a,b)=>a.datum.localeCompare(b.datum));toast('Měření uloženo');renderKarta(id)});
+  $('fVys').addEventListener('submit',async e=>{e.preventDefault();
+    const d=D($('vD').value), v=parseVal(d,$('vH').value);
+    if(v==null||isNaN(v)){toast(d.typ==='cas'?'Čas piš jako 6:57,8':'Výsledek piš jako číslo');return}
+    const {data,error}=await sb.from('vysledky').insert({sverenec_id:id,disciplina_id:d.id,datum:$('vDat').value,hodnota:v,poznamka:$('vP').value.trim()||null}).select().single();
+    if(error){toast('Uložení se nepovedlo: '+error.message);return}
+    vys.push(data);vys.sort((a,b)=>a.datum.localeCompare(b.datum));toast('Výsledek uložen');renderKarta(id)});
+  $('karta').querySelectorAll('[data-delv],[data-delb]').forEach(btn=>btn.addEventListener('click',async()=>{
+    if(!btn.classList.contains('c')){btn.classList.add('c');btn.textContent='smazat?';return}
+    const isV=!!btn.dataset.delv, rid=btn.dataset.delv||btn.dataset.delb;
+    const {error}=await sb.from(isV?'vysledky':'biometrie').delete().eq('id',rid);if(error){toast('Smazání se nepovedlo');return}
+    if(isV)vys=vys.filter(x=>x.id!==rid);else bio=bio.filter(x=>x.id!==rid);toast('Smazáno');renderKarta(id)}));
+}
+
+/* ---------- hromadný zápis ---------- */
+['zDisc','zDatum','zGrp'].forEach(id=>$(id).addEventListener('change',renderZapis));
+function zKids(){const g=$('zGrp').value;return sverenci.filter(k=>k.aktivni&&(g==='*'||k.skupina_id===g)).sort(byName)}
+function renderZapis(){
+  const did=$('zDisc').value, dt=$('zDatum').value, kids=zKids();$('zMsg').textContent='';
+  if(did==='bio'){
+    $('zHint').textContent='Výška a rozpětí v cm, váha v kg. Prázdné pole se neukládá.';
+    $('zTable').innerHTML=`<table><thead><tr><th>Svěřenec</th><th>Výška</th><th>Váha</th><th>Rozpětí</th></tr></thead><tbody>${kids.map(k=>{const e=bio.find(x=>x.sverenec_id===k.id&&x.datum===dt)||{};
+      return `<tr data-k="${k.id}" data-e="${e.id||''}"><td>${esc(kidName(k))}</td>${['vyska','vaha','rozpeti'].map(f=>`<td><input data-f="${f}" inputmode="decimal" value="${e[f]!=null?numCz(e[f]):''}"></td>`).join('')}</tr>`}).join('')}</tbody></table>`;
+  }else{
+    const d=D(did);if(!d){$('zTable').innerHTML='';return}
+    $('zHint').textContent=d.typ==='cas'?'Čas piš jako 6:57,8 (min:s,desetiny). Smazáním hodnoty se výsledek z tohoto dne odstraní.':`Hodnota v ${d.jednotka||'jednotkách disciplíny'}. Smazáním hodnoty se výsledek z tohoto dne odstraní.`;
+    $('zTable').innerHTML=`<table><thead><tr><th>Svěřenec</th><th>${esc(d.nazev)}</th><th>Poznámka</th><th class="num">Osobní rekord</th></tr></thead><tbody>${kids.map(k=>{const e=vys.find(x=>x.sverenec_id===k.id&&x.disciplina_id===d.id&&x.datum===dt), pb=best(d,kidVys(k.id,d.id));
+      return `<tr data-k="${k.id}" data-e="${e?e.id:''}"><td>${esc(kidName(k))}</td><td><input data-f="h" inputmode="${d.typ==='cas'?'text':'decimal'}" value="${e?inputVal(d,+e.hodnota):''}"></td><td><input data-f="p" value="${esc(e&&e.poznamka||'')}"></td><td class="num">${pb?fmtVal(d,+pb.hodnota):'—'}</td></tr>`}).join('')}</tbody></table>`;
+  }
+  if(!kids.length)$('zTable').innerHTML='<div class="empty">Ve výběru nejsou žádní aktivní svěřenci.</div>';
+}
+$('zSave').addEventListener('click',async()=>{
+  const did=$('zDisc').value, dt=$('zDatum').value, common=$('zPozn').value.trim();
+  const trs=[...$('zTable').querySelectorAll('tr[data-k]')];let bad=0,ins=[],upd=[],del=[];
+  trs.forEach(tr=>tr.querySelectorAll('input').forEach(i=>i.classList.remove('bad')));
+  if(did==='bio'){
+    trs.forEach(tr=>{const o={};let any=false;tr.querySelectorAll('input').forEach(i=>{const v=i.value.trim();if(v===''){o[i.dataset.f]=null;return}const n=+v.replace(',','.');if(isNaN(n)){i.classList.add('bad');bad++}o[i.dataset.f]=n;any=true});
+      const e=tr.dataset.e;if(any)(e?upd:ins).push({id:e,row:Object.assign({sverenec_id:tr.dataset.k,datum:dt},o)});else if(e)del.push(e)});
+  }else{
+    const d=D(did);
+    trs.forEach(tr=>{const hi=tr.querySelector('[data-f="h"]'),pi=tr.querySelector('[data-f="p"]');const v=parseVal(d,hi.value);const e=tr.dataset.e;
+      if(v==null){if(e)del.push(e);return} if(isNaN(v)){hi.classList.add('bad');bad++;return}
+      (e?upd:ins).push({id:e,row:{sverenec_id:tr.dataset.k,disciplina_id:d.id,datum:dt,hodnota:v,poznamka:pi.value.trim()||common||null}})});
+  }
+  if(bad){toast(`Opravit: ${bad} ${bad===1?'hodnota':'hodnoty'} (zvýrazněno)`);return}
+  if(!ins.length&&!upd.length&&!del.length){toast('Není co uložit');return}
+  const T=did==='bio'?'biometrie':'vysledky';$('zSave').disabled=true;
+  try{
+    if(ins.length){const r=await sb.from(T).insert(ins.map(x=>x.row)).select();if(r.error)throw r.error;if(T==='biometrie')bio.push(...r.data);else vys.push(...r.data)}
+    for(const u of upd){const r=await sb.from(T).update(u.row).eq('id',u.id).select().single();if(r.error)throw r.error;const arr=T==='biometrie'?bio:vys;Object.assign(arr.find(x=>x.id===u.id),r.data)}
+    if(del.length){const r=await sb.from(T).delete().in('id',del);if(r.error)throw r.error;if(T==='biometrie')bio=bio.filter(x=>!del.includes(x.id));else vys=vys.filter(x=>!del.includes(x.id))}
+    bio.sort((a,b)=>a.datum.localeCompare(b.datum));vys.sort((a,b)=>a.datum.localeCompare(b.datum));
+    const m=`Uloženo: ${ins.length} nových, ${upd.length} upravených${del.length?`, ${del.length} smazaných`:''}`;toast(m);renderZapis();$('zMsg').textContent=m;
+  }catch(err){toast('Uložení se nepovedlo: '+(err.message||err))}finally{$('zSave').disabled=false}
+});
+
+/* ---------- disciplíny ---------- */
+$('discAdmin').addEventListener('toggle',renderDisc);
+function renderDisc(){
+  $('discList').innerHTML=disc.map(d=>`${esc(d.nazev)}${d.aktivni?'':' (skrytá)'}`).join(' · ');
+  $('discForm').innerHTML=`<form id="fDisc" class="grid" style="margin-top:10px">
+    <div class="f"><label for="dN">Název</label><input id="dN" required placeholder="např. Trenažér 1000 m"></div>
+    <div class="f"><label for="dK">Kategorie</label><input id="dK" list="dKl" required><datalist id="dKl">${[...new Set(disc.map(d=>d.kategorie))].map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
+    <div class="f"><label for="dT">Typ</label><select id="dT"><option value="cas">čas</option><option value="cislo">číslo</option></select></div>
+    <div class="f"><label for="dJ">Jednotka</label><input id="dJ" placeholder="u čísla: cm, kg, opak."></div>
+    <div class="f"><label for="dL">Lepší je</label><select id="dL"><option value="nizsi">nižší (čas)</option><option value="vyssi">vyšší</option></select></div>
+    <div class="f"><label for="dV">Vzdálenost (m)</label><input id="dV" inputmode="numeric" placeholder="pro tempo na 500 m"></div>
+    <div class="f" style="justify-content:flex-end"><button class="btn small" type="submit">Přidat disciplínu</button></div></form>`;
+  $('fDisc').addEventListener('submit',async e=>{e.preventDefault();
+    const nazev=$('dN').value.trim();const id=nazev.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'')||('d'+Date.now());
+    if(disc.some(d=>d.id===id)){toast('Disciplína s tímto názvem už existuje');return}
+    const o={id,nazev,kategorie:$('dK').value.trim(),typ:$('dT').value,jednotka:$('dJ').value.trim()||null,lepsi:$('dL').value,vzdalenost:parseInt($('dV').value)||null,poradi:200};
+    const {data,error}=await sb.from('discipliny').insert(o).select().single();if(error){toast('Uložení se nepovedlo: '+error.message);return}
+    disc.push(data);fillDiscSelects();renderDisc();toast('Disciplína přidána')});
+}
+
+/* ---------- porovnání ---------- */
+['pDisc','pMode','pRoc','pOff'].forEach(id=>$(id).addEventListener('change',()=>renderPor(id)));
+function renderPor(src){
+  const d=D($('pDisc').value)||disc[0];if(!d){$('pTable').innerHTML='';return}
+  if(src!=='pMode'&&src!=='pRoc'&&src!=='pOff'){
+    const dates=[...new Set(vys.filter(v=>v.disciplina_id===d.id).map(v=>v.datum))].sort().reverse();
+    $('pMode').innerHTML='<option value="best">Osobní rekordy</option>'+dates.map(x=>`<option value="${x}">Termín ${fmtD(x)}</option>`).join('');
+    const ys=[...new Set(sverenci.map(k=>k.rocnik).filter(Boolean))].sort();
+    const cur=$('pRoc').value;$('pRoc').innerHTML='<option value="">Všechny</option>'+ys.map(y=>`<option ${String(y)===cur?'selected':''}>${y}</option>`).join('');
+  }
+  const mode=$('pMode').value, roc=$('pRoc').value, off=$('pOff').checked;
+  const rows=[];
+  sverenci.filter(k=>(off||k.aktivni)&&(!roc||String(k.rocnik)===roc)).forEach(k=>{
+    const l=kidVys(k.id,d.id);const v=mode==='best'?best(d,l):l.filter(x=>x.datum===mode).sort((a,b)=>better(d,+a.hodnota,+b.hodnota)?-1:1)[0];
+    if(v)rows.push({k,v});});
+  rows.sort((a,b)=>better(d,+a.v.hodnota,+b.v.hodnota)?-1:better(d,+b.v.hodnota,+a.v.hodnota)?1:0);
+  const hasT=d.typ==='cas'&&d.vzdalenost, hasS=!!d.scm;
+  $('pTable').innerHTML=rows.length?`<table><thead><tr><th class="num">#</th><th>Svěřenec</th><th class="num">Roč.</th><th class="num">Výkon</th>${hasT?'<th class="num">Tempo/500</th>':''}${hasS?'<th class="num">Body SCM</th>':''}${mode==='best'?'<th>Datum</th>':''}</tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.k.aktivni?'':'off'}"><td class="num">${i+1}</td><td><a href="#s-${r.k.id}">${esc(kidName(r.k))}</a>${r.k.aktivni?'':' <small class="note">neaktivní</small>'}</td><td class="num">${esc(r.k.rocnik||'')}</td><td class="num"><b>${fmtVal(d,+r.v.hodnota)}</b></td>${hasT?`<td class="num">${tempo(d,+r.v.hodnota)}</td>`:''}${hasS?`<td class="num">${scmBody(d.scm,+r.v.hodnota,r.k.rocnik,r.k.pohlavi)??'—'}</td>`:''}${mode==='best'?`<td>${fmtD(r.v.datum)}</td>`:''}</tr>`).join('')}</tbody></table>`
+    :'<div class="empty">Pro tento výběr nejsou žádné výsledky.</div>';
+}
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
+</script>
+</body>
+</html>

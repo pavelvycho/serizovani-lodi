@@ -34,7 +34,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font
 .top{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
 .top-in{max-width:900px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .brand{font-family:var(--display);font-weight:700;font-size:1.3rem;letter-spacing:.02em;margin-right:auto}
-nav.tabs{display:flex;gap:4px}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap}
 nav.tabs a,nav.tabs button{font:inherit;font-weight:600;font-size:.95rem;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px;cursor:pointer}
 nav.tabs [aria-current="page"]{background:var(--water);border-color:var(--water);color:var(--paper)}
 .who{font-size:.85rem;color:var(--muted);display:flex;gap:8px;align-items:center}
@@ -102,6 +102,7 @@ legend{font-size:.8rem;font-weight:600;color:var(--muted);text-transform:upperca
     <button type="button" id="tabLode" aria-current="page">Lodě</button>
     <button type="button" id="tabVesla">Vesla</button>
     <a href="dochazka.html">Docházka</a>
+    <a href="vykony.html">Výkony</a>
   </nav>
   <div class="who" id="who" hidden><span id="whoTxt"></span><button class="btn ghost small" id="logout" type="button">Odhlásit</button></div>
 </div></header>

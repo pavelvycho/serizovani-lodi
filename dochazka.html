@@ -35,7 +35,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font
 .top{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
 .top-in{max-width:900px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .brand{font-family:var(--display);font-weight:700;font-size:1.3rem;letter-spacing:.02em;margin-right:auto}
-nav.tabs{display:flex;gap:4px}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap}
 nav.tabs a,nav.tabs button{font:inherit;font-weight:600;font-size:.95rem;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px;cursor:pointer}
 nav.tabs [aria-current="page"]{background:var(--water);border-color:var(--water);color:var(--paper)}
 .who{font-size:.85rem;color:var(--muted);display:flex;gap:8px;align-items:center}
@@ -131,6 +131,7 @@ td.pct{font-family:var(--mono)}
 .daynote{border-radius:8px;padding:10px 12px;font-size:.92rem;background:var(--paper);border:1px dashed var(--grey-line)}
 .daynote b{color:var(--ink)}
 th.nek,td.nek{background:var(--grey-soft);color:var(--muted)}
+.kidlink{color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted)}
 .tlist{display:flex;flex-direction:column;gap:6px}
 .tlist div{font-size:.9rem;border-left:3px solid var(--water);padding:2px 10px}
 .tlist b{font-family:var(--mono);font-weight:500}
@@ -143,6 +144,7 @@ th.nek,td.nek{background:var(--grey-soft);color:var(--muted)}
     <a href="./">Kalkulačka</a>
     <a href="lode.html">Lodě</a>
     <a href="dochazka.html" aria-current="page">Docházka</a>
+    <a href="vykony.html">Výkony</a>
   </nav>
   <div class="who" id="who" hidden><span id="whoTxt"></span><button class="btn ghost small" id="logout" type="button">Odhlásit</button></div>
 </div></header>
@@ -363,7 +365,7 @@ async function loadZapis(){
 function zapisKids(){const ids=new Set(Object.keys(stavy));return sverenci.filter(k=>k.skupina_id===grp&&k.aktivni||ids.has(k.id)).sort(byName)}
 function renderZapis(){
   const kids=zapisKids();
-  $('roster').innerHTML=kids.length?kids.map(k=>{const s=stavy[k.id]||'';return `<div class="kid"><span class="nm">${esc(kidName(k))}<small>${esc([k.rocnik,k.kategorie].filter(Boolean).join(' · '))}${k.aktivni?'':' · vyřazen'}</small></span><button type="button" class="st" data-k="${k.id}" data-s="${s}">${STAV_TXT[s]}</button></div>`}).join(''):'<div class="panel empty">Ve skupině nejsou žádní svěřenci.</div>';
+  $('roster').innerHTML=kids.length?kids.map(k=>{const s=stavy[k.id]||'';return `<div class="kid"><span class="nm"><a href="vykony.html#s-${k.id}" class="kidlink">${esc(kidName(k))}</a><small>${esc([k.rocnik,k.kategorie].filter(Boolean).join(' · '))}${k.aktivni?'':' · vyřazen'}</small></span><button type="button" class="st" data-k="${k.id}" data-s="${s}">${STAV_TXT[s]}</button></div>`}).join(''):'<div class="panel empty">Ve skupině nejsou žádní svěřenci.</div>';
   $('naplnChips').innerHTML=NAPLN.map(n=>`<button type="button" data-n="${n}" aria-pressed="${napln.has(n)}">${n}</button>`).join('');
   renderSum(kids);updOff();
 }
@@ -479,6 +481,7 @@ function kidForm(k){
     <div class="f"><label for="k_prijmeni">Příjmení</label><input id="k_prijmeni" type="text" value="${esc(k.prijmeni||'')}"></div>
     <div class="f"><label for="k_rocnik">Ročník</label><input id="k_rocnik" type="number" inputmode="numeric" value="${esc(k.rocnik||'')}"></div>
     <div class="f"><label for="k_kat">Kategorie</label><input id="k_kat" type="text" list="katList" value="${esc(k.kategorie||'')}"><datalist id="katList">${['žák','žákyně','dorostenec','dorostenka','junior','juniorka'].map(x=>`<option value="${x}">`).join('')}</datalist></div>
+    <div class="f"><label for="k_poh">Pohlaví</label><select id="k_poh"><option value="M" ${k.pohlavi!=='Z'?'selected':''}>chlapec</option><option value="Z" ${k.pohlavi==='Z'?'selected':''}>dívka</option></select></div>
     <div class="f"><label for="k_skup">Skupina</label><select id="k_skup"><option value="">—</option>${skupiny.map(g=>`<option value="${g.id}" ${g.id===k.skupina_id?'selected':''}>${esc(g.nazev)}</option>`).join('')}</select></div>
     <div class="f" style="justify-content:flex-end"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="k_akt" style="width:auto" ${k.aktivni?'checked':''}> Aktivní</label></div>
     <div class="f full"><label for="k_pozn">Poznámka</label><textarea id="k_pozn">${esc(k.poznamka||'')}</textarea></div></div>
@@ -486,7 +489,7 @@ function kidForm(k){
     <div class="actions"><button class="btn" type="submit">${k.id?'Uložit':'Přidat'}</button><button class="btn ghost" type="button" id="kCancel">Zavřít</button>${k.id?'<button class="btn danger" type="button" id="kDel">Smazat i s docházkou</button>':''}</div></form>`;
   $('kCancel').addEventListener('click',()=>$('kidForm').innerHTML='');
   $('fKid').addEventListener('submit',async e=>{e.preventDefault();
-    const o={jmeno:$('k_jmeno').value.trim(),prijmeni:$('k_prijmeni').value.trim()||null,rocnik:parseInt($('k_rocnik').value)||null,kategorie:$('k_kat').value.trim()||null,skupina_id:$('k_skup').value||null,aktivni:$('k_akt').checked,poznamka:$('k_pozn').value.trim()||null};
+    const o={jmeno:$('k_jmeno').value.trim(),prijmeni:$('k_prijmeni').value.trim()||null,rocnik:parseInt($('k_rocnik').value)||null,kategorie:$('k_kat').value.trim()||null,skupina_id:$('k_skup').value||null,aktivni:$('k_akt').checked,pohlavi:$('k_poh').value,poznamka:$('k_pozn').value.trim()||null};
     const r=k.id?await sb.from('sverenci').update(o).eq('id',k.id).select().single():await sb.from('sverenci').insert(o).select().single();
     if(r.error){toast('Uložení se nepovedlo: '+r.error.message);return}
     if(k.id)Object.assign(k,r.data);else sverenci.push(r.data);toast('Uloženo');renderGroups();renderSverenci();});

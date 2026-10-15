@@ -109,13 +109,13 @@ svg .tw{font:600 12.5px var(--body);fill:var(--water)}
 .apptop{background:var(--paper);border-bottom:1px solid var(--line)}
 .apptop-in{max-width:900px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .appbrand{font-family:var(--display);font-weight:700;font-size:1.3rem;margin-right:auto}
-.apptabs{display:flex;gap:4px}
+.apptabs{display:flex;gap:4px;flex-wrap:wrap}
 .apptabs a{font-weight:600;font-size:.95rem;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
 .apptabs a[aria-current="page"]{background:var(--water);border-color:var(--water);color:var(--paper)}
 </style>
 </head>
 <body>
-<header class="apptop"><div class="apptop-in"><span class="appbrand">Seřízení lodi</span><nav class="apptabs" aria-label="Sekce"><a href="./" aria-current="page">Kalkulačka</a><a href="lode.html">Lodě</a><a href="lode.html#vesla">Vesla</a><a href="dochazka.html">Docházka</a></nav></div></header>
+<header class="apptop"><div class="apptop-in"><span class="appbrand">Seřízení lodi</span><nav class="apptabs" aria-label="Sekce"><a href="./" aria-current="page">Kalkulačka</a><a href="lode.html">Lodě</a><a href="lode.html#vesla">Vesla</a><a href="dochazka.html">Docházka</a><a href="vykony.html">Výkony</a></nav></div></header>
 
 
 <div class="wrap">
@@ -707,6 +707,14 @@ if(!window.claude){
   });
 }
 
+/* předvyplnění z karty svěřence (Výkony → Otevřít v kalkulačce) */
+(function(){try{const q=new URLSearchParams(location.search);if(!q.has('name')&&!q.has('h'))return;
+  const roc=parseInt(q.get('rocnik')),age=roc?new Date().getFullYear()-roc:null;
+  if(age){cat=age<=14?'zak':age<=16?'dor':age<=18?'jun':'dos';boat=DEF[cat].boat;$('blade').value=DEF[cat].blade}
+  sex=q.get('pohlavi')==='Z'?'z':'m';
+  [['name','name'],['h','h'],['w','w'],['arm','arm']].forEach(([p,id])=>{if(q.get(p))$(id).value=q.get(p)});
+  currentId=null;history.replaceState(null,'',location.pathname);
+}catch(e){}})();
 initLocal();segs();calc();setStore(false);initDb();
 })();
 </script>

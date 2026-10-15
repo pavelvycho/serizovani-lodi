@@ -18,6 +18,10 @@ Stránka `lode.html` (záložky **Lodě** a **Vesla**) je společná evidence lo
 
 Stránka `dochazka.html`: zápis tréninku (byl / omluven / chyběl, náplň, poznámka), přehled účasti za období s procenty a export do Excelu (CSV), správa svěřenců a skupin. Data v Supabase, nastavení v `supabase/NAVOD.md`.
 
+## Výkony
+
+Stránka `vykony.html`: karta svěřence (biometrie, osobní rekordy, historie s grafem, body SCM, odkaz do kalkulačky), hromadný zápis výsledků a biometrie, porovnání podle disciplíny a termínu. Disciplíny si trenéři rozšiřují sami. Body SCM podle `scm-normy-2026.js`.
+
 ## Data kalkulačky
 
 Svěřenci a rozsahy vesel v kalkulačce se ukládají **do prohlížeče v zařízení** (localStorage). Každý trenér má svoje svěřence ve svém telefonu. Přenos mezi zařízeními nebo kolegovi: **Stáhnout zálohu svěřenců** → soubor `.json` → v druhém zařízení **Nahrát zálohu**.
