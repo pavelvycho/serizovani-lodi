@@ -19,7 +19,7 @@
 :root{
   --bg:#F3F6F5; --paper:#FFFFFF; --ink:#13232A; --muted:#5B6E73; --line:#D5DFDE;
   --water:#0D6B70; --water-soft:#E1EFEE; --blade:#C27419; --blade-soft:#FBEEDC;
-  --ok:#2E7D4F; --ok-soft:#E3F2E8; --warn:#B26A00; --warn-soft:#FDF0DA; --bad:#B23A3A; --bad-soft:#F8E3E3;
+  --ok:#2E7D4F; --ok-soft:#E3F2E8; --grey-soft:#E4E7E7; --grey-line:#C3CACA; --warn:#B26A00; --warn-soft:#FDF0DA; --bad:#B23A3A; --bad-soft:#F8E3E3;
   --display:"Barlow Condensed","Arial Narrow",sans-serif;
   --body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
@@ -28,7 +28,7 @@
 @media (prefers-color-scheme: dark){:root{
   --bg:#0E1719; --paper:#152225; --ink:#E4ECEB; --muted:#93A6A8; --line:#26383B;
   --water:#4DB6B3; --water-soft:#183236; --blade:#E79A3E; --blade-soft:#33261A;
-  --ok:#6CC08F; --ok-soft:#183223; --warn:#E3A84B; --warn-soft:#33281A; --bad:#E07B7B; --bad-soft:#3A1F1F; color-scheme:dark}}
+  --ok:#6CC08F; --ok-soft:#183223; --grey-soft:#22292B; --grey-line:#3A4446; --warn:#E3A84B; --warn-soft:#33281A; --bad:#E07B7B; --bad-soft:#3A1F1F; color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
@@ -125,6 +125,12 @@ td.pct{font-family:var(--mono)}
 .legend{font-size:.8rem;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
 .toolbar .f{flex:1 1 140px}
 .toolbar .f input{flex:none;width:100%}
+.day-ok #zCard,.day-ok .kid{background:var(--ok-soft);border-color:var(--ok)}
+.day-no #zCard,.day-no .kid{background:var(--grey-soft);border-color:var(--grey-line)}
+.day-no .kid .nm,.day-no .st{opacity:.55}
+.daynote{border-radius:8px;padding:10px 12px;font-size:.92rem;background:var(--paper);border:1px dashed var(--grey-line)}
+.daynote b{color:var(--ink)}
+th.nek,td.nek{background:var(--grey-soft);color:var(--muted)}
 .tlist{display:flex;flex-direction:column;gap:6px}
 .tlist div{font-size:.9rem;border-left:3px solid var(--water);padding:2px 10px}
 .tlist b{font-family:var(--mono);font-weight:500}
@@ -182,17 +188,18 @@ td.pct{font-family:var(--mono)}
         <input type="date" id="datum" aria-label="Datum tréninku">
         <button type="button" id="dNext" aria-label="Další den">›</button>
       </div>
-      <div class="panel" style="gap:8px">
+      <div class="panel" style="gap:8px" id="zCard">
         <div class="actions" style="justify-content:space-between">
           <h2 id="zTitle">Docházka</h2>
           <div class="actions"><button class="btn ghost small" type="button" id="noTr">Nebyl trénink</button><button class="btn ghost small" type="button" id="allIn">Všichni byli</button></div>
         </div>
+        <div class="daynote" id="noNote" hidden><b>Trénink nebyl.</b> Den se do účasti nepočítá. Pokud trénink přece byl, ťukni na kohokoli v docházce nebo na „Všichni byli“ a ulož.</div>
         <div class="sum" id="sum"></div>
-        <div class="banner" id="noTrAsk" hidden><span id="noTrTxt"></span><button class="btn danger small" type="button" id="noTrYes">Ano, smazat</button><button class="btn ghost small" type="button" id="noTrNo">Ne</button></div>
+        <div class="banner" id="noTrAsk" hidden><span id="noTrTxt"></span><button class="btn danger small" type="button" id="noTrYes">Ano, trénink nebyl</button><button class="btn ghost small" type="button" id="noTrNo">Ne</button></div>
         <p class="note">Ťuknutím přepínáš: byl → omluven → chyběl. Kdo zůstane nezapsaný, uloží se jako chyběl.</p>
       </div>
       <div class="roster" id="roster"></div>
-      <div class="panel">
+      <div class="panel" id="naplnPanel">
         <h2>Náplň tréninku</h2>
         <div class="chips" id="naplnChips"></div>
         <div class="f"><label for="naplnText">Podrobnosti</label><input id="naplnText" type="text" placeholder="např. 2× 20 min UT2, technika záseku"></div>
@@ -221,7 +228,8 @@ td.pct{font-family:var(--mono)}
       </div>
       <div class="panel">
         <div class="actions" style="justify-content:space-between"><h2 id="pTitle">Přehled</h2><button class="btn ghost small" type="button" id="csv">Stáhnout do Excelu</button></div>
-        <div class="legend"><span>✓ byl</span><span>O omluven</span><span>✗ chyběl</span><span>· nezapsán</span><span>% = účast ze všech tréninků</span></div>
+        <div class="legend"><span>šedý sloupec = trénink nebyl</span><span>✓ byl</span><span>O omluven</span><span>✗ chyběl</span><span>· nezapsán</span><span>% = účast z konaných tréninků</span></div>
+        <p class="note" id="pSum"></p>
         <div class="tablewrap" id="pTable"></div>
       </div>
       <div class="panel"><h2>Tréninky v období</h2><div class="tlist" id="pList"></div></div>
@@ -328,7 +336,13 @@ function refresh(){if(view==='zapis')loadZapis();else if(view==='prehled')loadPr
 
 /* ---------- zápis ---------- */
 let tr=null, stavy={}, napln=new Set(), dirty=false;
-function setDirty(v){dirty=v;$('dirty').textContent=v?'Neuloženo':''}
+function setDirty(v){dirty=v;$('dirty').textContent=v?'Neuloženo':'';updOff()}
+function updOff(){
+  const no=!!(tr&&tr.nekonal&&!dirty), ok=!!(tr&&!tr.nekonal&&!dirty);
+  const v=$('vZapis');v.classList.toggle('day-no',no);v.classList.toggle('day-ok',ok);
+  $('noNote').hidden=!no;$('sum').hidden=no;$('noTr').hidden=no;
+  $('meta').textContent=!tr?'Tento den zatím není zapsaný.':tr.nekonal?`Trénink nebyl – zapsal(a) ${tr.created_by||'?'}`:`Uloženo – zapsal(a) ${tr.created_by||'?'}`;
+}
 $('dPrev').addEventListener('click',()=>{if(dirty&&!confirmLeave($('dPrev')))return;$('datum').value=addDays($('datum').value,-1);loadZapis()});
 $('dNext').addEventListener('click',()=>{if(dirty&&!confirmLeave($('dNext')))return;$('datum').value=addDays($('datum').value,1);loadZapis()});
 $('datum').addEventListener('change',loadZapis);
@@ -343,7 +357,6 @@ async function loadZapis(){
   tr=data;stavy={};napln=new Set(tr?tr.napln:[]);
   if(tr){const r=await sb.from('dochazka').select('*').eq('trenink_id',tr.id);(r.data||[]).forEach(x=>stavy[x.sverenec_id]=x.stav)}
   $('naplnText').value=tr?tr.napln_text||'':'';$('pozn').value=tr?tr.poznamka||'':'';
-  $('meta').textContent=tr?`Zapsáno: ${tr.created_by||'?'}`:'Tento den zatím není zapsaný. Když trénink nebyl, nic neukládej – den se do přehledu nezapočítá.';
   $('noTrAsk').hidden=true;
   renderZapis();
 }
@@ -352,7 +365,7 @@ function renderZapis(){
   const kids=zapisKids();
   $('roster').innerHTML=kids.length?kids.map(k=>{const s=stavy[k.id]||'';return `<div class="kid"><span class="nm">${esc(kidName(k))}<small>${esc([k.rocnik,k.kategorie].filter(Boolean).join(' · '))}${k.aktivni?'':' · vyřazen'}</small></span><button type="button" class="st" data-k="${k.id}" data-s="${s}">${STAV_TXT[s]}</button></div>`}).join(''):'<div class="panel empty">Ve skupině nejsou žádní svěřenci.</div>';
   $('naplnChips').innerHTML=NAPLN.map(n=>`<button type="button" data-n="${n}" aria-pressed="${napln.has(n)}">${n}</button>`).join('');
-  renderSum(kids);
+  renderSum(kids);updOff();
 }
 function renderSum(kids){
   kids=kids||zapisKids();const c={byl:0,omluven:0,chybel:0,'':0};kids.forEach(k=>c[stavy[k.id]||'']++);
@@ -367,7 +380,7 @@ $('save').addEventListener('click',async()=>{
   if(!grp){toast('Nejdřív vyber skupinu');return}
   const btn=$('save');btn.disabled=true;
   try{
-    const body={skupina_id:grp,datum:$('datum').value,napln:[...napln],napln_text:$('naplnText').value.trim()||null,poznamka:$('pozn').value.trim()||null};
+    const body={skupina_id:grp,datum:$('datum').value,nekonal:false,napln:[...napln],napln_text:$('naplnText').value.trim()||null,poznamka:$('pozn').value.trim()||null};
     let r;
     if(tr) r=await sb.from('treninky').update(Object.assign(body,{updated_at:new Date().toISOString()})).eq('id',tr.id).select().single();
     else r=await sb.from('treninky').insert(body).select().single();
@@ -376,18 +389,28 @@ $('save').addEventListener('click',async()=>{
     const rows=zapisKids().map(k=>({trenink_id:tr.id,sverenec_id:k.id,stav:stavy[k.id]||'chybel'}));
     rows.forEach(x=>stavy[x.sverenec_id]=x.stav);
     if(rows.length){const d=await sb.from('dochazka').upsert(rows,{onConflict:'trenink_id,sverenec_id'});if(d.error){toast('Docházka se neuložila: '+d.error.message);return}}
-    setDirty(false);renderZapis();$('meta').textContent=`Zapsáno: ${tr.created_by||me.email}`;toast('Docházka uložena');
+    setDirty(false);renderZapis();toast('Docházka uložena');
   }finally{btn.disabled=false}
 });
-$('noTr').addEventListener('click',()=>{
-  if(!tr){setDirty(false);loadZapis();toast('Den bez tréninku – nic se neukládá ani nepočítá.');return}
-  $('noTrTxt').textContent=`Opravdu chceš smazat zápis tréninku z ${fmtD(tr.datum)} včetně docházky?`;$('noTrAsk').hidden=false;});
-$('noTrNo').addEventListener('click',()=>{$('noTrAsk').hidden=true});
-$('noTrYes').addEventListener('click',async()=>{
-  const {error}=await sb.from('treninky').delete().eq('id',tr.id);
+async function markNo(){
   $('noTrAsk').hidden=true;
-  if(error){toast('Smazání se nepovedlo');return}
-  setDirty(false);toast('Zápis smazán – den se do přehledu nepočítá');loadZapis();});
+  let r;
+  if(tr){
+    const d=await sb.from('dochazka').delete().eq('trenink_id',tr.id);
+    if(d.error){toast('Uložení se nepovedlo');return}
+    r=await sb.from('treninky').update({nekonal:true,napln:[],napln_text:null,updated_at:new Date().toISOString()}).eq('id',tr.id).select().single();
+  }else r=await sb.from('treninky').insert({skupina_id:grp,datum:$('datum').value,nekonal:true}).select().single();
+  if(r.error){toast('Uložení se nepovedlo: '+r.error.message);return}
+  tr=r.data;stavy={};napln=new Set();$('naplnText').value='';
+  setDirty(false);renderZapis();toast('Zapsáno: trénink nebyl');
+}
+$('noTr').addEventListener('click',()=>{
+  if(!grp){toast('Nejdřív vyber skupinu');return}
+  const filled=Object.values(stavy).some(Boolean)||napln.size||$('naplnText').value.trim();
+  if(!filled){markNo();return}
+  $('noTrTxt').textContent=`Opravdu trénink ${fmtD($('datum').value)} nebyl? Vyplněná docházka se smaže.`;$('noTrAsk').hidden=false;});
+$('noTrNo').addEventListener('click',()=>{$('noTrAsk').hidden=true});
+$('noTrYes').addEventListener('click',markNo);
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
 
 /* ---------- přehled ---------- */
@@ -414,19 +437,22 @@ async function loadPrehled(){
   const kids=sverenci.filter(k=>k.skupina_id===grp&&k.aktivni||map[k.id]).sort(byName);
   pData={g,trs,kids,map};
   if(!trs.length){$('pTable').innerHTML='<div class="empty">V tomto období nejsou zapsané žádné tréninky.</div>';$('pList').innerHTML='';return}
-  const stat=k=>{const m=map[k.id]||{};let byl=0,om=0;trs.forEach(t=>{if(m[t.id]==='byl')byl++;else if(m[t.id]==='omluven')om++});return{byl,om,pct:Math.round(byl/trs.length*100)}};
-  $('pTable').innerHTML=`<table><thead><tr><th class="l">Svěřenec</th><th>Účast</th><th>Oml.</th>${trs.map(t=>`<th title="${esc((t.napln||[]).join(', '))}">${fmtShort(t.datum)}</th>`).join('')}</tr></thead><tbody>${kids.map(k=>{const s=stat(k),m=map[k.id]||{};return `<tr><td class="l">${esc(kidName(k))}</td><td class="pct" title="${s.byl} z ${trs.length} tréninků">${s.pct} %</td><td class="pct">${s.om}</td>${trs.map(t=>{const v=m[t.id];return `<td class="c-${v||''}">${v?STAV_SYM[v]:'·'}</td>`}).join('')}</tr>`}).join('')}
-  <tr><td class="l"><b>Celkem přítomno</b></td><td></td><td></td>${trs.map(t=>`<td class="pct">${dch.filter(x=>x.trenink_id===t.id&&x.stav==='byl').length}</td>`).join('')}</tr></tbody></table>`;
-  $('pList').innerHTML=trs.slice().reverse().map(t=>`<div><b>${fmtD(t.datum)}</b> · ${esc([(t.napln||[]).join(', '),t.napln_text].filter(Boolean).join(' – ')||'bez náplně')}${t.poznamka?`<br><span class="note">${esc(t.poznamka)}</span>`:''}</div>`).join('');
+  const kon=trs.filter(t=>!t.nekonal), nek=trs.length-kon.length;
+  $('pSum').textContent=`Konaných tréninků: ${kon.length}${nek?` · nekonalo se: ${nek}`:''}`;
+  const stat=k=>{const m=map[k.id]||{};let byl=0,om=0;kon.forEach(t=>{if(m[t.id]==='byl')byl++;else if(m[t.id]==='omluven')om++});return{byl,om,pct:kon.length?Math.round(byl/kon.length*100):0}};
+  $('pTable').innerHTML=`<table><thead><tr><th class="l">Svěřenec</th><th>Účast</th><th>Oml.</th>${trs.map(t=>`<th class="${t.nekonal?'nek':''}" title="${t.nekonal?'trénink nebyl':esc((t.napln||[]).join(', '))}">${fmtShort(t.datum)}</th>`).join('')}</tr></thead><tbody>${kids.map(k=>{const s=stat(k),m=map[k.id]||{};return `<tr><td class="l">${esc(kidName(k))}</td><td class="pct" title="${s.byl} z ${kon.length} konaných tréninků">${s.pct} %</td><td class="pct">${s.om}</td>${trs.map(t=>{if(t.nekonal)return '<td class="nek">–</td>';const v=m[t.id];return `<td class="c-${v||''}">${v?STAV_SYM[v]:'·'}</td>`}).join('')}</tr>`}).join('')}
+  <tr><td class="l"><b>Celkem přítomno</b></td><td></td><td></td>${trs.map(t=>t.nekonal?'<td class="nek">–</td>':`<td class="pct">${dch.filter(x=>x.trenink_id===t.id&&x.stav==='byl').length}</td>`).join('')}</tr></tbody></table>`;
+  $('pList').innerHTML=trs.slice().reverse().map(t=>`<div><b>${fmtD(t.datum)}</b> · ${t.nekonal?'trénink nebyl':esc([(t.napln||[]).join(', '),t.napln_text].filter(Boolean).join(' – ')||'bez náplně')}${t.poznamka?`<br><span class="note">${esc(t.poznamka)}</span>`:''}</div>`).join('');
 }
 $('csv').addEventListener('click',()=>{
   if(!pData||!pData.trs.length){toast('Není co stáhnout');return}
   const {g,trs,kids,map}=pData, q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-  const lines=[['Příjmení','Jméno','Ročník','Kategorie','Přítomen','Omluven','Tréninků','Účast %',...trs.map(t=>t.datum)].map(q).join(';')];
-  kids.forEach(k=>{const m=map[k.id]||{};const byl=trs.filter(t=>m[t.id]==='byl').length,om=trs.filter(t=>m[t.id]==='omluven').length;
-    lines.push([k.prijmeni,k.jmeno,k.rocnik,k.kategorie,byl,om,trs.length,Math.round(byl/trs.length*100),...trs.map(t=>({byl:'byl',omluven:'omluven',chybel:'chyběl'})[m[t.id]]||'')].map(q).join(';'))});
+  const kon=trs.filter(t=>!t.nekonal);
+  const lines=[['Příjmení','Jméno','Ročník','Kategorie','Přítomen','Omluven','Konaných tréninků','Účast %',...trs.map(t=>t.datum)].map(q).join(';')];
+  kids.forEach(k=>{const m=map[k.id]||{};const byl=kon.filter(t=>m[t.id]==='byl').length,om=kon.filter(t=>m[t.id]==='omluven').length;
+    lines.push([k.prijmeni,k.jmeno,k.rocnik,k.kategorie,byl,om,kon.length,kon.length?Math.round(byl/kon.length*100):0,...trs.map(t=>t.nekonal?'nekonal se':(({byl:'byl',omluven:'omluven',chybel:'chyběl'})[m[t.id]]||''))].map(q).join(';'))});
   lines.push('');lines.push([q('Datum'),q('Náplň'),q('Podrobnosti'),q('Poznámka')].join(';'));
-  trs.forEach(t=>lines.push([t.datum,(t.napln||[]).join(', '),t.napln_text,t.poznamka].map(q).join(';')));
+  trs.forEach(t=>lines.push([t.datum,t.nekonal?'trénink nebyl':(t.napln||[]).join(', '),t.napln_text,t.poznamka].map(q).join(';')));
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`dochazka-${g.nazev.replace(/\s+/g,'-')}-${$('pOd').value}-${$('pDo').value}.csv`;
   document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
