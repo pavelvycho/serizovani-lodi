@@ -145,6 +145,7 @@ th.nek,td.nek{background:var(--grey-soft);color:var(--muted)}
     <a href="lode.html">Lodě</a>
     <a href="dochazka.html" aria-current="page">Docházka</a>
     <a href="vykony.html">Výkony</a>
+    <a href="sprava.html" id="navSprava" hidden>Správa</a>
   </nav>
   <div class="who" id="who" hidden><span id="whoTxt"></span><button class="btn ghost small" id="logout" type="button">Odhlásit</button></div>
 </div></header>
@@ -299,8 +300,9 @@ async function handleSession(session){
   if(loaded&&me&&me.email===u.email)return; if(handling)return handling;
   handling=(async()=>{
     me={email:u.email};$('who').hidden=false;$('whoTxt').textContent=u.email;$('loading').hidden=false;
-    const {data:t}=await sb.from('treneri').select('email').ilike('email',u.email).maybeSingle();
+    const {data:t}=await sb.from('treneri').select('email,admin').ilike('email',u.email).maybeSingle();
     if(!t){$('loading').hidden=true;$('deniedMail').textContent=u.email;show('vDenied');return}
+    if(t.admin)$('navSprava').hidden=false;
     await loadBase();loaded=true;$('loading').hidden=true;show('vApp');start();
   })();
   try{await handling}finally{handling=null}

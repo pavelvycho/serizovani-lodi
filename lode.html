@@ -103,6 +103,7 @@ legend{font-size:.8rem;font-weight:600;color:var(--muted);text-transform:upperca
     <button type="button" id="tabVesla">Vesla</button>
     <a href="dochazka.html">Docházka</a>
     <a href="vykony.html">Výkony</a>
+    <a href="sprava.html" id="navSprava" hidden>Správa</a>
   </nav>
   <div class="who" id="who" hidden><span id="whoTxt"></span><button class="btn ghost small" id="logout" type="button">Odhlásit</button></div>
 </div></header>
@@ -239,10 +240,10 @@ async function handleSession(session){
   handling=(async()=>{
     me={email:u.email};$('who').hidden=false;$('whoTxt').textContent=u.email;
     $('loading').hidden=false;
-    const {data:t}=await sb.from('treneri').select('email,jmeno').eq('email',u.email.toLowerCase()).maybeSingle();
-    const {data:t2}=t?{data:t}:await sb.from('treneri').select('email,jmeno').ilike('email',u.email).maybeSingle();
+    const {data:t}=await sb.from('treneri').select('email,jmeno,admin').eq('email',u.email.toLowerCase()).maybeSingle();
+    const {data:t2}=t?{data:t}:await sb.from('treneri').select('email,jmeno,admin').ilike('email',u.email).maybeSingle();
     if(!t2){$('loading').hidden=true;$('deniedMail').textContent=u.email;show('vDenied');return}
-    me.jmeno=t2.jmeno;
+    me.jmeno=t2.jmeno;if(t2.admin)$('navSprava').hidden=false;
     await loadAll();loaded=true;$('loading').hidden=true;
     route();
   })();

@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0D6B70">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Seřízení lodi">
+<title>Správa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+
+/* Layout: loděnice — horní lišta s přepínačem Kalkulačka / Lodě / Vesla, seznam lodí po velikostech, detail lodi s historií seřízení */
+:root{
+  --bg:#F3F6F5; --paper:#FFFFFF; --ink:#13232A; --muted:#5B6E73; --line:#D5DFDE;
+  --water:#0D6B70; --water-soft:#E1EFEE; --blade:#C27419; --blade-soft:#FBEEDC;
+  --ok:#2E7D4F; --ok-soft:#E3F2E8; --warn:#B26A00; --warn-soft:#FDF0DA; --bad:#B23A3A; --bad-soft:#F8E3E3;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0E1719; --paper:#152225; --ink:#E4ECEB; --muted:#93A6A8; --line:#26383B;
+  --water:#4DB6B3; --water-soft:#183236; --blade:#E79A3E; --blade-soft:#33261A;
+  --ok:#6CC08F; --ok-soft:#183223; --warn:#E3A84B; --warn-soft:#33281A; --bad:#E07B7B; --bad-soft:#3A1F1F; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.top{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+.top-in{max-width:900px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-family:var(--display);font-weight:700;font-size:1.3rem;letter-spacing:.02em;margin-right:auto}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap}
+nav.tabs a,nav.tabs button{font:inherit;font-weight:600;font-size:.95rem;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px;cursor:pointer}
+nav.tabs [aria-current="page"]{background:var(--water);border-color:var(--water);color:var(--paper)}
+.who{font-size:.85rem;color:var(--muted);display:flex;gap:8px;align-items:center}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:18px 60px;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;line-height:1.05;margin:0}
+h2{font-family:var(--display);font-weight:600;font-size:1.35rem;margin:0;letter-spacing:.02em}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.note{font-size:.88rem;color:var(--muted);margin:0;max-width:70ch}
+.btn{font:inherit;font-weight:600;border-radius:6px;padding:8px 14px;cursor:pointer;border:1px solid var(--water);background:var(--water);color:var(--paper)}
+.btn.ghost{background:transparent;color:var(--water)}
+.btn.small{padding:4px 10px;font-size:.9rem}
+.btn.danger{border-color:var(--bad);background:transparent;color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--blade);outline-offset:2px}
+input,select,textarea{font:inherit;font-size:1rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);width:100%}
+input[type="number"]{font-family:var(--mono)}
+textarea{min-height:70px;resize:vertical}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.f label{font-size:.85rem;font-weight:600}
+.f .hint{font-size:.75rem;color:var(--muted)}
+.f.full{grid-column:1/-1}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar input{flex:1 1 180px;width:auto}
+.toolbar select{width:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:inherit;font-size:.9rem;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:4px 11px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--water);border-color:var(--water);color:var(--paper)}
+.group h3{font-family:var(--display);font-weight:600;font-size:1.05rem;text-transform:uppercase;letter-spacing:.08em;color:var(--water);margin:6px 0 6px}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.item:hover{border-color:var(--water)}
+.typ{font-family:var(--mono);font-size:.9rem;background:var(--water-soft);color:var(--water);border-radius:4px;padding:1px 6px;text-align:center;min-width:44px}
+.item .name{font-weight:700}
+.item .meta{font-size:.85rem;color:var(--muted);grid-column:2/4}
+.pill{font-size:.75rem;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.s-ok{background:var(--ok-soft);color:var(--ok)}
+.s-gar{background:var(--water-soft);color:var(--water)}
+.s-np{background:var(--warn-soft);color:var(--warn)}
+.s-vy{background:var(--bad-soft);color:var(--bad)}
+.empty{padding:20px;text-align:center;color:var(--muted)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 16px}
+.kv div{display:flex;flex-direction:column}
+.kv span{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.kv b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hist details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--bg)}
+.hist summary{cursor:pointer;font-weight:600}
+.hist summary small{font-weight:400;color:var(--muted);margin-left:6px}
+.banner{background:var(--blade-soft);border-left:3px solid var(--blade);padding:10px 12px;border-radius:4px;font-size:.92rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:.92rem;z-index:20;max-width:calc(100% - 32px)}
+.back{font:inherit;background:none;border:0;color:var(--water);cursor:pointer;padding:0;font-weight:600}
+.code{font-family:var(--mono);letter-spacing:.3em;font-size:1.3rem;text-align:center}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0}
+legend{font-size:.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:0 4px}
+.oar .typ{min-width:70px}
+
+/* Správa: přehled čísel nahoře, pod tím trenéři, skupiny a disciplíny jako seznamy s formulářem */
+.sub{display:flex;gap:4px;flex-wrap:wrap}
+.sub button{font:inherit;font-weight:600;font-size:.9rem;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+.sub button[aria-pressed="true"]{border-color:var(--water);color:var(--water);background:var(--water-soft)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat span{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.stat b{font-family:var(--mono);font-weight:500;font-size:1.6rem;color:var(--water)}
+.stat small{color:var(--muted);font-size:.82rem}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;font-size:.9rem;width:100%}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:var(--line);min-width:80px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+.check{display:flex;gap:8px;align-items:center;font-weight:600}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="brand">Seřízení lodi</div>
+  <nav class="tabs" aria-label="Sekce">
+    <a href="./">Kalkulačka</a>
+    <a href="lode.html">Lodě</a>
+    <a href="dochazka.html">Docházka</a>
+    <a href="vykony.html">Výkony</a>
+    <a href="sprava.html" aria-current="page">Správa</a>
+  </nav>
+  <div class="who" id="who" hidden><span id="whoTxt"></span><button class="btn ghost small" id="logout" type="button">Odhlásit</button></div>
+</div></header>
+
+<main class="wrap">
+  <section class="panel" id="vSetup" hidden><h1>Databáze není připojená</h1><p class="note">V souboru <code>config.js</code> chybí adresa a klíč Supabase.</p></section>
+  <section class="panel" id="vLogin" hidden>
+    <h1>Přihlášení trenéra</h1>
+    <p class="note">Přihlas se e-mailem ze seznamu trenérů. Pošleme ti šestimístný kód.</p>
+    <form id="fEmail" class="actions"><div class="f" style="flex:1 1 240px"><label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required></div><button class="btn" type="submit" style="align-self:flex-end">Poslat kód</button></form>
+    <form id="fCode" class="actions" hidden><div class="f" style="flex:1 1 200px"><label for="code">Kód z e-mailu</label><input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required></div><button class="btn" type="submit" style="align-self:flex-end">Přihlásit</button><button class="btn ghost" type="button" id="codeBack" style="align-self:flex-end">Jiný e-mail</button></form>
+    <p class="note" id="loginMsg"></p>
+  </section>
+  <section class="panel" id="vDenied" hidden><h1>Jen pro správce</h1><p class="note" id="deniedTxt"></p></section>
+
+  <div id="vApp" hidden style="display:flex;flex-direction:column;gap:14px">
+    <div class="sub">
+      <button type="button" data-v="prehled" aria-pressed="true">Přehled</button>
+      <button type="button" data-v="treneri" aria-pressed="false">Trenéři</button>
+      <button type="button" data-v="skupiny" aria-pressed="false">Skupiny</button>
+      <button type="button" data-v="discipliny" aria-pressed="false">Disciplíny</button>
+    </div>
+
+    <section id="vPrehled" style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel"><div class="actions" style="justify-content:space-between"><h1>Přehled klubu</h1><select id="sMes" style="width:auto" aria-label="Měsíc"></select></div></div>
+      <div class="stats" id="stats"></div>
+      <div class="panel"><h2>Docházka podle skupin</h2><div class="tablewrap" id="grpStats"></div></div>
+    </section>
+
+    <section id="vTreneri" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel"><div class="actions" style="justify-content:space-between"><h1>Trenéři</h1><button class="btn" type="button" id="addTr">Přidat trenéra</button></div>
+        <p class="note">Trenér se přihlásí sám kódem z e-mailu. Stačí ho tady přidat. Správce navíc vidí tuto sekci.</p>
+        <div class="list" id="trList"></div></div>
+      <div id="trForm"></div>
+      <div class="panel"><h2>Přihlášení</h2><p class="note">Kdo se kdy naposledy přihlásil. Kdo se zkusil přihlásit a nemá přístup, jde přidat jedním ťuknutím.</p><div class="tablewrap" id="loginList"></div></div>
+    </section>
+
+    <section id="vSkupiny" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel"><div class="actions" style="justify-content:space-between"><h1>Skupiny</h1><button class="btn" type="button" id="addGrp">Nová skupina</button></div>
+        <p class="note">Skupinu nelze smazat, aby nezmizela historie docházky. Nepotřebnou skupinu jen vypni („Aktivní“).</p>
+        <div class="list" id="grpList"></div></div>
+      <div id="grpForm"></div>
+    </section>
+
+    <section id="vDisc" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel"><div class="actions" style="justify-content:space-between"><h1>Disciplíny</h1><button class="btn" type="button" id="addDisc">Nová disciplína</button></div>
+        <p class="note">Skrytá disciplína se nenabízí k zápisu, ale její výsledky zůstávají. Smazat jde jen disciplína bez výsledků.</p>
+        <div class="list" id="discList"></div></div>
+      <div id="discForm"></div>
+    </section>
+  </div>
+  <p class="note" id="loading" hidden>Načítám…</p>
+</main>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let toastT;function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3500)}
+const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*60000);return z.toISOString().slice(0,10)};
+const fmtDT=s=>s?new Date(s).toLocaleString('cs-CZ',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+const errMsg=e=>{const m=(e&&e.message)||String(e);return /Nemůžeš|Musí zůstat|Jen pro/.test(m)?m.replace(/^.*?(Nemůžeš|Musí zůstat|Jen pro)/,'$1'):m};
+function twoStep(btn,label){if(btn.dataset.c==='1')return true;btn.dataset.c='1';btn.textContent=label;return false}
+
+/* ---------- přihlášení ---------- */
+const VIEWS=['vSetup','vLogin','vDenied','vApp'];
+function show(v){VIEWS.forEach(x=>$(x).hidden=x!==v)}
+const cfg=window.SERIZENI_CONFIG||{};
+if(!cfg.supabaseUrl||!cfg.supabaseAnonKey||!window.supabase){show('vSetup');return}
+const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+let loginEmail='', me=null, loaded=false;
+$('fEmail').addEventListener('submit',async e=>{e.preventDefault();loginEmail=$('email').value.trim();$('loginMsg').textContent='Posílám kód…';
+  const {error}=await sb.auth.signInWithOtp({email:loginEmail,options:{shouldCreateUser:true,emailRedirectTo:location.href.split('#')[0].split('?')[0]}});
+  if(error){$('loginMsg').textContent='Kód se nepodařilo poslat: '+error.message;return}
+  $('fEmail').hidden=true;$('fCode').hidden=false;$('code').focus();$('loginMsg').textContent=`Kód jsme poslali na ${loginEmail}.`;});
+$('fCode').addEventListener('submit',async e=>{e.preventDefault();
+  const {error}=await sb.auth.verifyOtp({email:loginEmail,token:$('code').value.trim(),type:'email'});
+  if(error)$('loginMsg').textContent='Kód nesedí nebo vypršel.';});
+$('codeBack').addEventListener('click',()=>{$('fCode').hidden=true;$('fEmail').hidden=false;$('loginMsg').textContent=''});
+$('logout').addEventListener('click',()=>sb.auth.signOut());
+// Supabase: v callbacku nesmí běžet další dotazy – proto odklad.
+sb.auth.onAuthStateChange((ev,s)=>{setTimeout(()=>handleSession(s),0)});
+sb.auth.getSession().then(({data})=>handleSession(data.session));
+let handling=null;
+async function handleSession(session){
+  const u=session&&session.user;
+  if(!u){me=null;loaded=false;$('who').hidden=true;$('fEmail').hidden=false;$('fCode').hidden=true;show('vLogin');return}
+  if(loaded&&me&&me.email===u.email)return; if(handling)return handling;
+  handling=(async()=>{
+    me={email:u.email.toLowerCase()};$('who').hidden=false;$('whoTxt').textContent=u.email;$('loading').hidden=false;
+    const {data:t}=await sb.from('treneri').select('*').ilike('email',u.email).maybeSingle();
+    if(!t||!t.admin){$('loading').hidden=true;$('deniedTxt').textContent=t?'Tuto sekci vidí jen správci aplikace.':`E-mail ${u.email} není v seznamu trenérů.`;show('vDenied');return}
+    await loadAll();$('loading').hidden=true;loaded=true;show('vApp');init();
+  })();
+  try{await handling}finally{handling=null}
+}
+
+/* ---------- data ---------- */
+let treneri=[], skupiny=[], sverenci=[], disc=[], vysCount={}, lode=[];
+async function loadAll(){
+  const r=await Promise.all([sb.from('treneri').select('*').order('prijmeni'),sb.from('skupiny').select('*').order('nazev'),sb.from('sverenci').select('id,skupina_id,aktivni'),
+    sb.from('discipliny').select('*').order('poradi'),sb.from('vysledky').select('id,disciplina_id,datum'),sb.from('lode').select('id,stav')]);
+  const bad=r.findIndex(x=>x.error);if(bad>=0){toast('Část dat se nepodařilo načíst. Jsou spuštěné všechny SQL skripty (až po 8-sprava.sql)?')}
+  [treneri,skupiny,sverenci,disc]=r.slice(0,4).map(x=>x.data||[]);
+  const vy=r[4].data||[];vysCount={};vy.forEach(v=>vysCount[v.disciplina_id]=(vysCount[v.disciplina_id]||0)+1);window._vys=vy;
+  lode=r[5].data||[];
+}
+const trName=t=>[t.jmeno,t.prijmeni].filter(Boolean).join(' ')||t.email;
+
+/* ---------- navigace ---------- */
+const SECT={prehled:'vPrehled',treneri:'vTreneri',skupiny:'vSkupiny',discipliny:'vDisc'};
+function setView(v){Object.entries(SECT).forEach(([k,id])=>$(id).hidden=k!==v);document.querySelectorAll('.sub button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));
+  if(v==='prehled')renderStats();if(v==='treneri'){renderTr();renderLogins()}if(v==='skupiny')renderGrp();if(v==='discipliny')renderDisc();
+  history.replaceState(null,'',location.pathname+(v==='prehled'?'':'#'+v));}
+document.querySelector('.sub').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setView(b.dataset.v)});
+function init(){
+  const d=new Date();const opts=[];for(let i=0;i<12;i++){const x=new Date(d.getFullYear(),d.getMonth()-i,1);opts.push(`<option value="${iso(x).slice(0,7)}">${x.toLocaleDateString('cs-CZ',{month:'long',year:'numeric'})}</option>`)}
+  $('sMes').innerHTML=opts.join('');$('sMes').addEventListener('change',renderStats);
+  const h=location.hash.slice(1);setView(SECT[h]?h:'prehled');
+}
+
+/* ---------- přehled ---------- */
+async function renderStats(){
+  const m=$('sMes').value, od=m+'-01', doD=iso(new Date(+m.slice(0,4),+m.slice(5,7),0));
+  const t=await sb.from('treninky').select('*').gte('datum',od).lte('datum',doD);
+  const trs=t.data||[];let dch=[];
+  if(trs.length){const r=await sb.from('dochazka').select('*').in('trenink_id',trs.map(x=>x.id));dch=r.data||[]}
+  const s=await sb.from('serizeni').select('id,datum').gte('datum',od).lte('datum',doD);
+  const kon=trs.filter(x=>!x.nekonal), byl=dch.filter(x=>x.stav==='byl').length, all=dch.filter(x=>kon.some(k=>k.id===x.trenink_id)).length;
+  const vysM=(window._vys||[]).filter(v=>v.datum>=od&&v.datum<=doD).length;
+  const card=(l,v,sm)=>`<div class="stat"><span>${l}</span><b>${v}</b>${sm?`<small>${sm}</small>`:''}</div>`;
+  $('stats').innerHTML=[
+    card('Trenéři',treneri.length,`${treneri.filter(x=>x.admin).length} správce`),
+    card('Svěřenci',sverenci.filter(x=>x.aktivni).length,`aktivních · ${sverenci.filter(x=>!x.aktivni).length} neaktivních`),
+    card('Lodě v provozu',lode.filter(x=>x.stav==='v provozu').length,`z ${lode.length}`),
+    card('Tréninky',kon.length,`v měsíci${trs.length-kon.length?` · ${trs.length-kon.length} nekonalo se`:''}`),
+    card('Průměrná účast',all?Math.round(byl/all*100)+' %':'—','z konaných tréninků'),
+    card('Výsledky',vysM,'zapsané v měsíci'),
+    card('Seřízení lodí',(s.data||[]).length,'zapsaná v měsíci')
+  ].join('');
+  const rows=skupiny.map(g=>{const gk=kon.filter(x=>x.skupina_id===g.id),gd=dch.filter(x=>gk.some(k=>k.id===x.trenink_id)),gb=gd.filter(x=>x.stav==='byl').length,p=gd.length?Math.round(gb/gd.length*100):null;
+    const tr=treneri.find(x=>x.email===g.trener_email);
+    return `<tr><td>${esc(g.nazev)}${g.aktivni?'':' <small class="note">neaktivní</small>'}</td><td>${esc(tr?trName(tr):g.trener_email||'—')}</td><td class="num">${sverenci.filter(k=>k.skupina_id===g.id&&k.aktivni).length}</td><td class="num">${gk.length}</td><td class="num">${p==null?'—':p+' %'}</td><td><div class="bar"><i style="width:${p||0}%"></i></div></td></tr>`}).join('');
+  $('grpStats').innerHTML=skupiny.length?`<table><thead><tr><th>Skupina</th><th>Trenér</th><th class="num">Svěřenců</th><th class="num">Tréninků</th><th class="num">Účast</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">Zatím žádné skupiny.</div>';
+}
+
+/* ---------- trenéři ---------- */
+function renderTr(){
+  $('trList').innerHTML=treneri.slice().sort((a,b)=>trName(a).localeCompare(trName(b),'cs')).map(t=>`<button type="button" class="item" data-e="${esc(t.email)}"><span class="typ">${t.admin?'správce':'trenér'}</span><span class="name">${esc(trName(t))}${t.email===me.email?' <small class="note">(ty)</small>':''}</span><span class="pill ${t.admin?'s-gar':'s-ok'}">${t.admin?'správce':'trenér'}</span><span class="meta">${esc(t.email)} · skupiny: ${esc(skupiny.filter(g=>g.trener_email===t.email).map(g=>g.nazev).join(', ')||'—')}</span></button>`).join('');
+}
+$('trList').addEventListener('click',e=>{const b=e.target.closest('.item');if(b)trForm(treneri.find(t=>t.email===b.dataset.e))});
+$('addTr').addEventListener('click',()=>trForm({}));
+function trForm(t){
+  const self=t.email===me.email;
+  $('trForm').innerHTML=`<form id="fTr" class="panel"><h2>${t.email?esc(trName(t)):'Nový trenér'}</h2><div class="grid">
+    <div class="f"><label for="t_j">Jméno</label><input id="t_j" required value="${esc(t.jmeno||'')}"></div>
+    <div class="f"><label for="t_p">Příjmení</label><input id="t_p" required value="${esc(t.prijmeni||'')}"></div>
+    <div class="f"><label for="t_e">E-mail</label><input id="t_e" type="email" required value="${esc(t.email||'')}"><span class="hint">tímto e-mailem se přihlašuje</span></div>
+    <div class="f" style="justify-content:flex-end"><label class="check"><input type="checkbox" id="t_a" style="width:auto" ${t.admin?'checked':''} ${self&&t.admin?'disabled':''}> Správce</label>${self&&t.admin?'<span class="hint">sám sobě roli neodebereš</span>':''}</div></div>
+    <div class="actions"><button class="btn" type="submit">${t.email?'Uložit':'Přidat trenéra'}</button><button class="btn ghost" type="button" id="tCancel">Zavřít</button>${t.email&&!self?'<button class="btn danger" type="button" id="tDel">Odebrat přístup</button>':''}</div></form>`;
+  $('tCancel').addEventListener('click',()=>$('trForm').innerHTML='');
+  $('fTr').addEventListener('submit',async e=>{e.preventDefault();
+    const o={jmeno:$('t_j').value.trim(),prijmeni:$('t_p').value.trim(),email:$('t_e').value.trim().toLowerCase(),admin:$('t_a').checked};
+    if(!t.email&&treneri.some(x=>x.email===o.email)){toast('Tento e-mail už v seznamu je');return}
+    const r=t.email?await sb.from('treneri').update(o).eq('email',t.email).select().single():await sb.from('treneri').insert(o).select().single();
+    if(r.error){toast('Uložení se nepovedlo: '+errMsg(r.error));return}
+    if(t.email){if(t.email!==o.email)skupiny.forEach(g=>{if(g.trener_email===t.email)g.trener_email=o.email});Object.assign(t,r.data)}else treneri.push(r.data);
+    toast(t.email?'Uloženo':`Přidán. ${o.jmeno} se teď může přihlásit e-mailem ${o.email}.`);$('trForm').innerHTML='';renderTr();renderLogins();});
+  if($('tDel'))$('tDel').addEventListener('click',async e=>{if(!twoStep(e.currentTarget,`Opravdu odebrat ${trName(t)}?`))return;
+    const {error}=await sb.from('treneri').delete().eq('email',t.email);if(error){toast('Odebrání se nepovedlo: '+errMsg(error));return}
+    treneri=treneri.filter(x=>x!==t);toast('Přístup odebrán. Data, která zapsal, zůstávají.');$('trForm').innerHTML='';renderTr();renderLogins();});
+  $('trForm').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function renderLogins(){
+  const {data,error}=await sb.rpc('prehled_prihlaseni');
+  if(error){$('loginList').innerHTML='<div class="empty">Přehled přihlášení se nepodařilo načíst. Je spuštěný skript 8-sprava.sql?</div>';return}
+  $('loginList').innerHTML=data.length?`<table><thead><tr><th>E-mail</th><th>Naposledy</th><th>Poprvé</th><th>Přístup</th></tr></thead><tbody>${data.map(u=>{const has=treneri.some(t=>t.email===String(u.email).toLowerCase());
+    return `<tr><td>${esc(u.email)}</td><td>${fmtDT(u.posledni_prihlaseni)}</td><td>${fmtDT(u.prvni_prihlaseni)}</td><td>${has?'<span class="pill s-ok">trenér</span>':`<button type="button" class="btn ghost small" data-add="${esc(u.email)}">Přidat jako trenéra</button>`}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Zatím se nikdo nepřihlásil.</div>';
+  $('loginList').querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{trForm({});$('t_e').value=b.dataset.add;$('t_j').focus()}));
+}
+
+/* ---------- skupiny ---------- */
+function renderGrp(){
+  $('grpList').innerHTML=skupiny.length?skupiny.map(g=>{const tr=treneri.find(x=>x.email===g.trener_email);return `<button type="button" class="item" data-id="${g.id}"><span class="typ">${sverenci.filter(k=>k.skupina_id===g.id&&k.aktivni).length}</span><span class="name">${esc(g.nazev)}</span><span class="pill ${g.aktivni?'s-ok':'s-vy'}">${g.aktivni?'aktivní':'neaktivní'}</span><span class="meta">trenér: ${esc(tr?trName(tr):g.trener_email||'nepřiřazen')} · ${sverenci.filter(k=>k.skupina_id===g.id&&k.aktivni).length} aktivních svěřenců</span></button>`}).join(''):'<div class="empty">Zatím žádné skupiny.</div>';
+}
+$('grpList').addEventListener('click',e=>{const b=e.target.closest('.item');if(b)grpForm(skupiny.find(g=>g.id===b.dataset.id))});
+$('addGrp').addEventListener('click',()=>grpForm({aktivni:true}));
+function grpForm(g){
+  $('grpForm').innerHTML=`<form id="fGrp" class="panel"><h2>${g.id?esc(g.nazev):'Nová skupina'}</h2><div class="grid">
+    <div class="f"><label for="g_n">Název</label><input id="g_n" required value="${esc(g.nazev||'')}" placeholder="např. Eva – junioři"></div>
+    <div class="f"><label for="g_t">Trenér</label><select id="g_t"><option value="">— nepřiřazen —</option>${treneri.map(t=>`<option value="${esc(t.email)}" ${t.email===g.trener_email?'selected':''}>${esc(trName(t))}</option>`).join('')}</select></div>
+    <div class="f" style="justify-content:flex-end"><label class="check"><input type="checkbox" id="g_a" style="width:auto" ${g.aktivni?'checked':''}> Aktivní</label></div></div>
+    <p class="note">Svěřence do skupiny přiřadíš v Docházce → Svěřenci a skupiny.</p>
+    <div class="actions"><button class="btn" type="submit">${g.id?'Uložit':'Založit skupinu'}</button><button class="btn ghost" type="button" id="gCancel">Zavřít</button></div></form>`;
+  $('gCancel').addEventListener('click',()=>$('grpForm').innerHTML='');
+  $('fGrp').addEventListener('submit',async e=>{e.preventDefault();
+    const o={nazev:$('g_n').value.trim(),trener_email:$('g_t').value||null,aktivni:$('g_a').checked};
+    const r=g.id?await sb.from('skupiny').update(o).eq('id',g.id).select().single():await sb.from('skupiny').insert(o).select().single();
+    if(r.error){toast('Uložení se nepovedlo: '+errMsg(r.error));return}
+    if(g.id)Object.assign(g,r.data);else skupiny.push(r.data);skupiny.sort((a,b)=>a.nazev.localeCompare(b.nazev,'cs'));
+    toast('Uloženo');$('grpForm').innerHTML='';renderGrp();renderTr();});
+  $('grpForm').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---------- disciplíny ---------- */
+function renderDisc(){
+  $('discList').innerHTML=disc.map(d=>`<button type="button" class="item" data-id="${esc(d.id)}"><span class="typ">${vysCount[d.id]||0}</span><span class="name">${esc(d.nazev)}</span><span class="pill ${d.aktivni?'s-ok':'s-vy'}">${d.aktivni?'aktivní':'skrytá'}</span><span class="meta">${esc([d.kategorie,d.typ==='cas'?'čas':'číslo'+(d.jednotka?' ('+d.jednotka+')':''),d.lepsi==='nizsi'?'lepší nižší':'lepší vyšší',d.vzdalenost?d.vzdalenost+' m':null,d.scm?'body SCM':null].filter(Boolean).join(' · '))} · ${vysCount[d.id]||0} výsledků</span></button>`).join('');
+}
+$('discList').addEventListener('click',e=>{const b=e.target.closest('.item');if(b)discForm(disc.find(d=>d.id===b.dataset.id))});
+$('addDisc').addEventListener('click',()=>discForm({typ:'cas',lepsi:'nizsi',aktivni:true}));
+function discForm(d){
+  const used=vysCount[d.id]||0;
+  $('discForm').innerHTML=`<form id="fDisc" class="panel"><h2>${d.id?esc(d.nazev):'Nová disciplína'}</h2><div class="grid">
+    <div class="f"><label for="d_n">Název</label><input id="d_n" required value="${esc(d.nazev||'')}"></div>
+    <div class="f"><label for="d_k">Kategorie</label><input id="d_k" required list="dkl" value="${esc(d.kategorie||'')}"><datalist id="dkl">${[...new Set(disc.map(x=>x.kategorie))].map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
+    <div class="f"><label for="d_t">Typ</label><select id="d_t" ${used?'disabled':''}><option value="cas" ${d.typ==='cas'?'selected':''}>čas</option><option value="cislo" ${d.typ==='cislo'?'selected':''}>číslo</option></select>${used?'<span class="hint">nelze měnit, už má výsledky</span>':''}</div>
+    <div class="f"><label for="d_j">Jednotka</label><input id="d_j" value="${esc(d.jednotka||'')}" placeholder="cm, kg, opak."></div>
+    <div class="f"><label for="d_l">Lepší je</label><select id="d_l"><option value="nizsi" ${d.lepsi==='nizsi'?'selected':''}>nižší</option><option value="vyssi" ${d.lepsi==='vyssi'?'selected':''}>vyšší</option></select></div>
+    <div class="f"><label for="d_v">Vzdálenost (m)</label><input id="d_v" inputmode="numeric" value="${esc(d.vzdalenost||'')}"><span class="hint">pro tempo na 500 m</span></div>
+    <div class="f" style="justify-content:flex-end"><label class="check"><input type="checkbox" id="d_a" style="width:auto" ${d.aktivni?'checked':''}> Nabízet k zápisu</label></div></div>
+    <div class="actions"><button class="btn" type="submit">${d.id?'Uložit':'Přidat'}</button><button class="btn ghost" type="button" id="dCancel">Zavřít</button>${d.id&&!used?'<button class="btn danger" type="button" id="dDel">Smazat</button>':''}</div></form>`;
+  $('dCancel').addEventListener('click',()=>$('discForm').innerHTML='');
+  $('fDisc').addEventListener('submit',async e=>{e.preventDefault();
+    const o={nazev:$('d_n').value.trim(),kategorie:$('d_k').value.trim(),typ:$('d_t').value,jednotka:$('d_j').value.trim()||null,lepsi:$('d_l').value,vzdalenost:parseInt($('d_v').value)||null,aktivni:$('d_a').checked};
+    let r;
+    if(d.id)r=await sb.from('discipliny').update(o).eq('id',d.id).select().single();
+    else{o.id=o.nazev.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'')||'d'+Date.now();o.poradi=200;
+      if(disc.some(x=>x.id===o.id)){toast('Disciplína s tímto názvem už existuje');return}
+      r=await sb.from('discipliny').insert(o).select().single()}
+    if(r.error){toast('Uložení se nepovedlo: '+errMsg(r.error));return}
+    if(d.id)Object.assign(d,r.data);else disc.push(r.data);toast('Uloženo');$('discForm').innerHTML='';renderDisc();});
+  if($('dDel'))$('dDel').addEventListener('click',async e=>{if(!twoStep(e.currentTarget,'Opravdu smazat?'))return;
+    const {error}=await sb.from('discipliny').delete().eq('id',d.id);if(error){toast('Smazání se nepovedlo: '+errMsg(error));return}
+    disc=disc.filter(x=>x!==d);toast('Smazáno');$('discForm').innerHTML='';renderDisc();});
+  $('discForm').scrollIntoView({behavior:'smooth',block:'start'});
+}
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
+</script>
+</body>
+</html>

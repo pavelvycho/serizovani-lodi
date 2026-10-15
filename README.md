@@ -22,6 +22,10 @@ Stránka `dochazka.html`: zápis tréninku (byl / omluven / chyběl, náplň, po
 
 Stránka `vykony.html`: karta svěřence (biometrie, osobní rekordy, historie s grafem, body SCM, odkaz do kalkulačky), hromadný zápis výsledků a biometrie, porovnání podle disciplíny a termínu. Disciplíny si trenéři rozšiřují sami. Body SCM podle `scm-normy-2026.js`.
 
+## Správa
+
+Stránka `sprava.html` jen pro správce: trenéři a přehled přihlášení, skupiny, disciplíny, měsíční přehled klubu. SQL: `supabase/8-sprava.sql`.
+
 ## Data kalkulačky
 
 Svěřenci a rozsahy vesel v kalkulačce se ukládají **do prohlížeče v zařízení** (localStorage). Každý trenér má svoje svěřence ve svém telefonu. Přenos mezi zařízeními nebo kolegovi: **Stáhnout zálohu svěřenců** → soubor `.json` → v druhém zařízení **Nahrát zálohu**.
