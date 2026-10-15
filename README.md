@@ -1,4 +1,8 @@
-# Seřízení veslařské lodi
+# Veslo – VK Přerov
+
+Trenérská aplikace veslařského klubu: kalkulačka seřízení lodi, evidence lodí a vesel, docházka, výkony svěřenců a správa.
+
+## Kalkulačka seřízení
 
 Kalkulačka výchozího seřízení veslařské lodi pro trenéry. Podle kategorie (žactvo, dorost, junioři, dospělí), pohlaví, lodi a mír veslaře navrhne:
 

@@ -1,5 +1,5 @@
 // Offline cache. Při každé změně aplikace zvyš verzi, ať si telefony stáhnou novou.
-const CACHE = 'serizeni-v10';
+const CACHE = 'serizeni-v11';
 const CORE = ['./', './index.html', './lode.html', './dochazka.html', './vykony.html', './sprava.html', './scm-normy-2026.js', './config.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
