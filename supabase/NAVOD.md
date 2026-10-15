@@ -51,3 +51,8 @@ Odebrání = smazat řádek. Kdo není v tabulce, po přihlášení nic neuvidí
 1. **SQL Editor → New query** → vlož `supabase/6-vykony.sql` → **Run**. Přidá tabulky disciplín, biometrie a výsledků, pohlaví u svěřenců a 14 výchozích disciplín.
 2. Historické výsledky naimportuj souborem, který dostaneš zvlášť (obsahuje jména – na GitHub nepatří).
 3. Body SCM se počítají z `scm-normy-2026.js` (tabulka ČVS 2026). Ročníky mimo tabulku se počítají podle nejbližšího ročníku. Na nový rok stačí přidat nový soubor s normami.
+
+## Správa
+1. **SQL Editor → New query** → vlož `supabase/8-sprava.sql` → **Run**. Přidá příjmení trenérů (stávající jména rozdělí podle mezery), povolí správcům upravovat seznam trenérů a zpřístupní přehled přihlášení.
+2. Sekce **Správa** se v menu ukáže jen trenérům se zaškrtnutým „Správce“. Umí trenéry (přidat, upravit, odebrat), přehled přihlášení, skupiny, disciplíny a přehled čísel klubu za měsíc.
+3. Pojistky: nejde odebrat sám sebe, sám si vzít roli správce ani odebrat posledního správce.
